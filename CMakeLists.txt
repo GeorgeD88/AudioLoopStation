@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 # Change to your project name
-project(SimpleJucePluginTemplate VERSION 0.0.1)
+project(AudioLoopStation VERSION 0.0.1)
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -33,13 +33,15 @@ set(SourceFiles
         Source/PluginEditor.h
         Source/PluginProcessor.cpp
         Source/PluginProcessor.h
+        Source/Square.cpp
+        Source/Square.h
 )
 
 # Change these to your own preferences
 juce_add_plugin(${PROJECT_NAME}
-        COMPANY_NAME theaudioprogrammer
-        IS_SYNTH FALSE
-        NEEDS_MIDI_INPUT FALSE
+        COMPANY_NAME CS461_F25
+        IS_SYNTH TRUE
+        NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
@@ -48,7 +50,7 @@ juce_add_plugin(${PROJECT_NAME}
         PLUGIN_MANUFACTURER_CODE Tap1
         PLUGIN_CODE Reg0
         FORMATS VST3 AU Standalone
-        PRODUCT_NAME "TapPluginTemplate"        
+        PRODUCT_NAME "AudioLoopStation"
 )
 
 # How we want our SourceFiles to appear in our IDE

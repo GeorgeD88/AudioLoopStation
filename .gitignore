@@ -1,3 +1,19 @@
+# CMake build directories
+cmake-build-*/
+_Debug/
+_Release/
+
+# JUCE auto-generated build artifacts
+AudioLoopStation_artefacts/
+
+# JUCE dependency cache (CPM downloads)
+_deps/
+
+# Plugin outputs
+*.vst3
+*.component
+*.vst
+
 # Prerequisites
 *.d
 

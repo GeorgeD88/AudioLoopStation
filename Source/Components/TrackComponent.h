@@ -1,0 +1,14 @@
+//
+// Created by Vincewa Tran on 11/7/25.
+//
+
+#ifndef AUDIOLOOPSTATION_TRACKCOMPONENT_H
+#define AUDIOLOOPSTATION_TRACKCOMPONENT_H
+
+
+class TrackComponent {
+
+};
+
+
+#endif //AUDIOLOOPSTATION_TRACKCOMPONENT_H

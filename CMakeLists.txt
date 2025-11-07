@@ -33,8 +33,26 @@ set(SourceFiles
         Source/PluginEditor.h
         Source/PluginProcessor.cpp
         Source/PluginProcessor.h
-        Source/Square.cpp
-        Source/Square.h
+
+        # Audio Data in Audio/
+        Source/Audio/Track.cpp
+        Source/Audio/Track.h
+
+        # *later* we'll compile components into /Panels
+        # Source/Panels/TrackManagerPanel
+        # Source/Panels/LoopManagerPanel
+        # Source/Panels/TransportPanel
+        # Source/Panels/MeterPanel
+
+        # graphics elements in /Components
+        Source/Components/TrackComponent.cpp
+        Source/Components/TrackComponent.h
+        Source/Components/TransportButtons.cpp
+        Source/Components/TransportButtons.h
+
+        # Utiities - helpers, configs, and constants in /Utils
+        Source/Utils/TrackConfig.h
+
 )
 
 # Change these to your own preferences

@@ -34,21 +34,15 @@ set(SourceFiles
         Source/PluginProcessor.cpp
         Source/PluginProcessor.h
 
-        # Audio Data in Audio/
-        Source/Audio/Track.cpp
-        Source/Audio/Track.h
+        # Audio - Seperated audio data here (PluginProcessor Related)
+        Source/Audio/AudioEngine.cpp
+        Source/Audio/AudioEngine.h
+        Source/Audio/LoopChannel.cpp
+        Source/Audio/LoopChannel.h
 
-        # *later* we'll compile components into /Panels
-        # Source/Panels/TrackManagerPanel
-        # Source/Panels/LoopManagerPanel
-        # Source/Panels/TransportPanel
-        # Source/Panels/MeterPanel
-
-        # graphics elements in /Components
-        Source/Components/TrackComponent.cpp
-        Source/Components/TrackComponent.h
-        Source/Components/TransportButtons.cpp
-        Source/Components/TransportButtons.h
+        # UI - separate graphics data here (PluginEditor related)
+        Source/UI/Components/TransportControls.cpp
+        Source/UI/Components/TransportControls.h
 
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h

@@ -1,0 +1,14 @@
+//
+// Created by Vincewa Tran on 11/9/25.
+//
+
+#ifndef AUDIOLOOPSTATION_TRANSPORTCONTROLS_H
+#define AUDIOLOOPSTATION_TRANSPORTCONTROLS_H
+
+
+class TransportControls {
+
+};
+
+
+#endif //AUDIOLOOPSTATION_TRANSPORTCONTROLS_H

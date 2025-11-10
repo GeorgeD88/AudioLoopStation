@@ -1,14 +1,16 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "juce_audio_formats/juce_audio_formats.h"
+#include "juce_audio_devices/juce_audio_devices.h"
 
 //==============================================================================
-class AudioPluginAudioProcessor final : public juce::AudioProcessor
+class AudioLoopStationProcessor final : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    AudioPluginAudioProcessor();
-    ~AudioPluginAudioProcessor() override;
+    AudioLoopStationProcessor();
+    ~AudioLoopStationProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -42,7 +44,21 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // Transport control methods
+    void loadFile(const juce::File& audioFile);
+    void startPlayback();
+    void stopPlayback();
+    bool isPlaying() const { return transportSource.isPlaying(); }
+    double getCurrentPosition() const { return transportSource.getCurrentPosition(); }
+
+    juce::AudioTransportSource& getTransportSource() { return transportSource; }
+    juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
+
 private:
+    juce::AudioFormatManager formatManager;
+    std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
+    juce::AudioTransportSource transportSource;
+
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationProcessor)
 };

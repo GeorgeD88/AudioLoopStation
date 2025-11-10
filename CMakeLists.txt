@@ -35,14 +35,8 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
-        Source/Audio/AudioEngine.cpp
-        Source/Audio/AudioEngine.h
-        Source/Audio/LoopChannel.cpp
-        Source/Audio/LoopChannel.h
 
         # UI - separate graphics data here (PluginEditor related)
-        Source/UI/Components/TransportControls.cpp
-        Source/UI/Components/TransportControls.h
 
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h

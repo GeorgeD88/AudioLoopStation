@@ -82,6 +82,12 @@ cd AudioLoopStation
 
 ### 3. Build from Command Line
 
+#### Windows
+TBD
+
+#### Linux
+TBD
+
 #### macOS (Xcode)
 
 1. Generate Xcode project (Apple Silicon):

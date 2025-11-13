@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationProcessor& p)
+AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
         : AudioProcessorEditor (p), audioProcessor (p)
 {
     addAndMakeVisible (&openButton);
@@ -83,7 +83,7 @@ void AudioLoopStationEditor::updateTransportButtons()
 
 void AudioLoopStationEditor::openButtonClicked()
 {
-    auto chooser = std::make_unique<juce::FileChooser> ("Select a Wave file to play...",
+    chooser = std::make_unique<juce::FileChooser> ("Select a Wave file to play...",
                                                         juce::File {},
                                                         "*.wav;*.aif;*.aiff"); // Support multiple formats
 

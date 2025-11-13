@@ -7,7 +7,7 @@ class AudioLoopStationEditor final : public juce::AudioProcessorEditor,
                                      public juce::Timer
 {
 public:
-    explicit AudioLoopStationEditor (AudioLoopStationProcessor&);
+    explicit AudioLoopStationEditor (AudioLoopStationAudioProcessor&);
     ~AudioLoopStationEditor() override;
 
     //==============================================================================
@@ -16,7 +16,7 @@ public:
     void timerCallback() override;
 
 private:
-    AudioLoopStationProcessor& audioProcessor;
+    AudioLoopStationAudioProcessor& audioProcessor;
 
     juce::TextButton openButton;
     juce::TextButton playButton;
@@ -29,6 +29,8 @@ private:
     void stopButtonClicked();
     void loopButtonChanged();
     void updateTransportButtons();
+
+    std::unique_ptr<juce::FileChooser> chooser;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationEditor)
 };

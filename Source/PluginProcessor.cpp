@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-AudioLoopStationProcessor::AudioLoopStationProcessor()
+AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
         : AudioProcessor (BusesProperties()
 #if ! JucePlugin_IsMidiEffect
 #if ! JucePlugin_IsSynth
@@ -15,17 +15,17 @@ AudioLoopStationProcessor::AudioLoopStationProcessor()
     formatManager.registerBasicFormats();
 }
 
-AudioLoopStationProcessor::~AudioLoopStationProcessor()
+AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
 }
 
 //==============================================================================
-const juce::String AudioLoopStationProcessor::getName() const
+const juce::String AudioLoopStationAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool AudioLoopStationProcessor::acceptsMidi() const
+bool AudioLoopStationAudioProcessor::acceptsMidi() const
 {
 #if JucePlugin_WantsMidiInput
     return true;
@@ -34,7 +34,7 @@ bool AudioLoopStationProcessor::acceptsMidi() const
 #endif
 }
 
-bool AudioLoopStationProcessor::producesMidi() const
+bool AudioLoopStationAudioProcessor::producesMidi() const
 {
 #if JucePlugin_ProducesMidiOutput
     return true;
@@ -43,7 +43,7 @@ bool AudioLoopStationProcessor::producesMidi() const
 #endif
 }
 
-bool AudioLoopStationProcessor::isMidiEffect() const
+bool AudioLoopStationAudioProcessor::isMidiEffect() const
 {
 #if JucePlugin_IsMidiEffect
     return true;
@@ -52,49 +52,50 @@ bool AudioLoopStationProcessor::isMidiEffect() const
 #endif
 }
 
-double AudioLoopStationProcessor::getTailLengthSeconds() const
+double AudioLoopStationAudioProcessor::getTailLengthSeconds() const
 {
+    // Delay after audio is stopped
     return 0.0;
 }
 
-int AudioLoopStationProcessor::getNumPrograms()
+int AudioLoopStationAudioProcessor::getNumPrograms()
 {
     return 1;
 }
 
-int AudioLoopStationProcessor::getCurrentProgram()
+int AudioLoopStationAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void AudioLoopStationProcessor::setCurrentProgram (int index)
+void AudioLoopStationAudioProcessor::setCurrentProgram (int index)
 {
     juce::ignoreUnused (index);
 }
 
-const juce::String AudioLoopStationProcessor::getProgramName (int index)
+const juce::String AudioLoopStationAudioProcessor::getProgramName (int index)
 {
     juce::ignoreUnused (index);
     return {};
 }
 
-void AudioLoopStationProcessor::changeProgramName (int index, const juce::String& newName)
+void AudioLoopStationAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
     juce::ignoreUnused (index, newName);
 }
 
 //==============================================================================
-void AudioLoopStationProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void AudioLoopStationAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     transportSource.prepareToPlay(samplesPerBlock, sampleRate);
 }
 
-void AudioLoopStationProcessor::releaseResources()
+void AudioLoopStationAudioProcessor::releaseResources()
 {
     transportSource.releaseResources();
 }
 
-bool AudioLoopStationProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool AudioLoopStationAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
 #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -113,7 +114,7 @@ bool AudioLoopStationProcessor::isBusesLayoutSupported (const BusesLayout& layou
 #endif
 }
 
-void AudioLoopStationProcessor::processBlock (juce::AudioBuffer<float>& buffer,
+void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused (midiMessages);
@@ -138,28 +139,28 @@ void AudioLoopStationProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 }
 
 //==============================================================================
-bool AudioLoopStationProcessor::hasEditor() const
+bool AudioLoopStationAudioProcessor::hasEditor() const
 {
     return true;
 }
 
-juce::AudioProcessorEditor* AudioLoopStationProcessor::createEditor()
+juce::AudioProcessorEditor* AudioLoopStationAudioProcessor::createEditor()
 {
     return new AudioLoopStationEditor (*this);
 }
 
 //==============================================================================
-void AudioLoopStationProcessor::getStateInformation (juce::MemoryBlock& destData)
+void AudioLoopStationAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::ignoreUnused (destData);
 }
 
-void AudioLoopStationProcessor::setStateInformation (const void* data, int sizeInBytes)
+void AudioLoopStationAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     juce::ignoreUnused (data, sizeInBytes);
 }
 
-void AudioLoopStationProcessor::loadFile(const juce::File& audioFile)
+void AudioLoopStationAudioProcessor::loadFile(const juce::File& audioFile)
 {
     // Stop anything currently playing
     transportSource.stop();
@@ -189,12 +190,12 @@ void AudioLoopStationProcessor::loadFile(const juce::File& audioFile)
     }
 }
 
-void AudioLoopStationProcessor::startPlayback()
+void AudioLoopStationAudioProcessor::startPlayback()
 {
     transportSource.start();
 }
 
-void AudioLoopStationProcessor::stopPlayback()
+void AudioLoopStationAudioProcessor::stopPlayback()
 {
     transportSource.stop();
 }
@@ -202,5 +203,5 @@ void AudioLoopStationProcessor::stopPlayback()
 //==============================================================================
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new AudioLoopStationProcessor();
+    return new AudioLoopStationAudioProcessor();
 }

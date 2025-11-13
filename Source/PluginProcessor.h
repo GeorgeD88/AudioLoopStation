@@ -5,12 +5,12 @@
 #include "juce_audio_devices/juce_audio_devices.h"
 
 //==============================================================================
-class AudioLoopStationProcessor final : public juce::AudioProcessor
+class AudioLoopStationAudioProcessor final : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    AudioLoopStationProcessor();
-    ~AudioLoopStationProcessor() override;
+    AudioLoopStationAudioProcessor();
+    ~AudioLoopStationAudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -60,5 +60,5 @@ private:
     juce::AudioTransportSource transportSource;
 
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationAudioProcessor)
 };

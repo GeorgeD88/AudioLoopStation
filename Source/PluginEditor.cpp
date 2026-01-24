@@ -2,10 +2,12 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p)
+AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
+        : AudioProcessorEditor (p), audioProcessor (p)
 {
-    juce::ignoreUnused (processorRef);
+    addAndMakeVisible (&openButton);
+    openButton.setButtonText ("Open...");
+    openButton.onClick = [this] { openButtonClicked(); };
 
     addAndMakeVisible(mainComponent);
 
@@ -14,18 +16,30 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     setSize (1200, 900);
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
+AudioLoopStationEditor::~AudioLoopStationEditor()
 {
 }
 
-//==============================================================================
-void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
+void AudioLoopStationEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
-void AudioPluginAudioProcessorEditor::resized()
+void AudioLoopStationEditor::playButtonClicked()
 {
     mainComponent.setBounds(getLocalBounds());
+}
+
+void AudioLoopStationEditor::stopButtonClicked()
+{
+    audioProcessor.stopPlayback();
+    updateTransportButtons();
+}
+
+void AudioLoopStationEditor::loopButtonChanged()
+{
+    if (audioProcessor.getReaderSource() != nullptr)
+    {
+        audioProcessor.getReaderSource()->setLooping(loopingToggle.getToggleState());
+    }
 }

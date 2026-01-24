@@ -82,8 +82,42 @@ cd AudioLoopStation
 
 ### 3. Build from Command Line
 
-#### All Platforms
+#### Windows
 TBD
+
+#### Linux
+TBD
+
+#### macOS (Xcode)
+
+1. Generate Xcode project (Apple Silicon):
+
+```bash
+cmake -S . -B build/xcode -G Xcode -DCMAKE_BUILD_TYPE=Debug -DCMAKE_OSX_ARCHITECTURES=arm64
+```
+
+2. Build:
+
+- Option A — Xcode GUI
+  - Open the project: `open build/xcode/AudioLoopStation.xcodeproj`
+  - In Xcode, select the `AudioLoopStation_Standalone` scheme/target and Run.
+
+- Option B — CMake CLI (use this if you hit Xcode signing issues)
+  ```bash
+  cmake --build build/xcode --config Debug --target AudioLoopStation_Standalone -- -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO
+  ```
+
+3. Run the app:
+
+```bash
+open build/xcode/AudioLoopStation_artefacts/Debug/Standalone/AudioLoopStation.app
+```
+
+Notes:
+- The `-destination ...` and `CODE_SIGNING_ALLOWED=NO` flags are Xcode‑specific (they are forwarded to `xcodebuild` by CMake). Other generators will ignore them.
+- The first configure step will fetch JUCE via CPM (ensure you have network access)
+ - If macOS refuses to launch the app due to security (Gatekeeper), right‑click the app and choose Open. If that doesn’t work, go to System Settings → Privacy & Security and click “Open Anyway”.
+ 
 
 #### Run the Application
 TBD

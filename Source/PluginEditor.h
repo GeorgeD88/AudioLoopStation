@@ -4,20 +4,20 @@
 #include "UI/MainComponent.h"
 
 //==============================================================================
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
+class AudioLoopStationEditor final : public juce::AudioProcessorEditor,
+                                     public juce::Timer
 {
 public:
-    explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
-    ~AudioPluginAudioProcessorEditor() override;
+    explicit AudioLoopStationEditor (AudioLoopStationAudioProcessor&);
+    ~AudioLoopStationEditor() override;
 
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
-    AudioPluginAudioProcessor& processorRef;
+    AudioLoopStationAudioProcessor& audioProcessor;
 
     MainComponent mainComponent;
 

@@ -35,10 +35,6 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
-        Source/Audio/AudioEngine.cpp
-        Source/Audio/AudioEngine.h
-        Source/Audio/LoopChannel.cpp
-        Source/Audio/LoopChannel.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -89,6 +85,7 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_analytics
         juce::juce_audio_basics
         juce::juce_audio_devices
+        juce::juce_audio_formats
         juce::juce_core
         juce::juce_data_structures
         juce::juce_graphics

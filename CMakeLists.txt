@@ -22,9 +22,9 @@ include(${CPM_DOWNLOAD_LOCATION})
 
 # Bring in JUCE locally
 CPMAddPackage(
-    NAME juce
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG origin/master
+        NAME juce
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG origin/master
 )
 
 # Make sure you include any new source files here
@@ -35,8 +35,21 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
+        Source/Audio/AudioEngine.cpp
+        Source/Audio/AudioEngine.h
+        Source/Audio/LoopManager.cpp
+        Source/Audio/LoopManager.h
+        Source/Audio/LoopTrack.cpp
+        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
+        Source/UI/MainComponent.cpp
+        Source/UI/MainComponent.h
+        # UI - Subcomponents
+        Source/UI/Components/TransportComponent.cpp
+        Source/UI/Components/TransportComponent.h
+        Source/UI/Components/TrackControlPanel.cpp
+        Source/UI/Components/TrackControlPanel.h
 
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h
@@ -67,7 +80,7 @@ target_sources(${PROJECT_NAME} PRIVATE ${SourceFiles})
 
 # These are some toggleable options from the JUCE CMake API
 target_compile_definitions(${PROJECT_NAME}
-    PUBLIC
+        PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0

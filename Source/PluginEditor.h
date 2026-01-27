@@ -1,36 +1,15 @@
 #pragma once
-
 #include "PluginProcessor.h"
+#include "UI/MainComponent.h"
 
-//==============================================================================
-class AudioLoopStationEditor final : public juce::AudioProcessorEditor,
-                                     public juce::Timer
+class AudioLoopStationEditor : public juce::AudioProcessorEditor
 {
 public:
-    explicit AudioLoopStationEditor (AudioLoopStationAudioProcessor&);
-    ~AudioLoopStationEditor() override;
+    explicit AudioLoopStationEditor(AudioLoopStationAudioProcessor&);
 
-    //==============================================================================
-    void paint (juce::Graphics&) override;
-    void resized() override;
-    void timerCallback() override;
+    void resized() override { mainComponent.setBounds(getLocalBounds()); }
 
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
-
-    juce::TextButton openButton;
-    juce::TextButton playButton;
-    juce::TextButton stopButton;
-    juce::ToggleButton loopingToggle;
-    juce::Label currentPositionLabel;
-
-    void openButtonClicked();
-    void playButtonClicked();
-    void stopButtonClicked();
-    void loopButtonChanged();
-    void updateTransportButtons();
-
-    std::unique_ptr<juce::FileChooser> chooser;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationEditor)
+    MainComponent mainComponent;
 };

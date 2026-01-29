@@ -30,9 +30,16 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
 
 void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
 {
-    // planning to hook APVTS params here
-    juce::ignoreUnused(apvts);
-    
+    // hook APVTS params here (value names might change later, these are temporary)
+    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    {
+        auto idx = juce::String(i);
+
+        volParams[i]  = apvts.getRawParameterValue("track_" + idx + "_vol");
+        panParams[i]  = apvts.getRawParameterValue("track_" + idx + "_pan");
+        muteParams[i] = apvts.getRawParameterValue("track_" + idx + "_mute");
+        soloParams[i] = apvts.getRawParameterValue("track_" + idx + "_solo");
+    }
 }
 
 void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,

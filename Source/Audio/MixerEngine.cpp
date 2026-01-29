@@ -1,7 +1,3 @@
-//
-// Created by Besher Al Maleh on 1/29/26.
-//
-
 #include "MixerEngine.h"
 
 MixerEngine::MixerEngine()

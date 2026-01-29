@@ -1,7 +1,3 @@
-//
-// Created by Besher Al Maleh on 1/29/26.
-//
-
 #ifndef AUDIOLOOPSTATION_MIXERENGINE_H
 #define AUDIOLOOPSTATION_MIXERENGINE_H
 

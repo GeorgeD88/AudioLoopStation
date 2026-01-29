@@ -41,6 +41,8 @@ set(SourceFiles
         Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp
         Source/Audio/LoopManager.h
+        Source/Audio/MixerEngine.cpp
+        Source/Audio/MixerEngine.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp

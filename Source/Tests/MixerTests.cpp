@@ -30,20 +30,20 @@ public:
 
 static juce::AudioProcessorValueTreeState::ParameterLayout createMockLayout()
 {
-    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
     // TODO: add tracks 1-3 later, this is just to get started
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
             "track_0_vol", "track_0_vol",
             juce::NormalisableRange<float>(-60.0f, 6.0f, 0.01f), -6.0f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
             "track_0_pan", "track_0_pan",
             juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
-    params.push_back(std::make_unique<juce::AudioParameterBool>(
+    layout.add(std::make_unique<juce::AudioParameterBool>(
             "track_0_mute", "track_0_mute", false));
-    params.push_back(std::make_unique<juce::AudioParameterBool>(
+    layout.add(std::make_unique<juce::AudioParameterBool>(
             "track_0_solo", "track_0_solo", false));
 
-    return { std::move(params) };
+    return layout;
 }
 
 class MixerTests : public juce::UnitTest

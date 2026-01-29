@@ -3,12 +3,13 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Components/TransportComponent.h"
 #include "Components/TrackControlPanel.h"
+#include "../PluginProcessor.h"
 
 //==============================================================================
 class MainComponent final : public juce::Component
 {
 public:
-    MainComponent();
+    MainComponent(AudioLoopStationAudioProcessor& p);
     ~MainComponent() override;
 
     //==============================================================================
@@ -16,6 +17,7 @@ public:
     void resized() override;
 
 private:
+    AudioLoopStationAudioProcessor& audioProcessor;
     TransportComponent transportComponent;
     TrackControlPanel trackControlPanel;
 

@@ -1,7 +1,8 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent()
+MainComponent::MainComponent(AudioLoopStationAudioProcessor& p)
+    : audioProcessor(p)
 {
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);

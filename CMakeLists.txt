@@ -41,6 +41,8 @@ set(SourceFiles
         Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp
         Source/Audio/LoopManager.h
+        Source/Audio/MixerEngine.cpp
+        Source/Audio/MixerEngine.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -105,3 +107,24 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_warning_flags
 )
 
+# tiny console test runner (separate from the plugin)
+juce_add_console_app(AudioLoopStation_Tests
+        PRODUCT_NAME "AudioLoopStation_Tests"
+)
+
+target_sources(AudioLoopStation_Tests
+        PRIVATE
+        Source/Tests/TestRunner.cpp
+        Source/Tests/MixerTests.cpp
+        Source/Audio/MixerEngine.cpp
+        Source/Audio/MixerEngine.h
+        Source/Utils/TrackConfig.h
+)
+
+target_link_libraries(AudioLoopStation_Tests
+        PRIVATE
+        juce::juce_core
+        juce::juce_events
+        juce::juce_audio_basics
+        juce::juce_audio_processors
+)

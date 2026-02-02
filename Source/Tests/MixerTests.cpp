@@ -53,7 +53,7 @@ public:
 
     void runTest() override
     {
-        beginTest("attach params (basic)");
+        beginTest("attach params (basic test for now)");
 
         DummyProcessor proc;
         juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
@@ -66,6 +66,17 @@ public:
         expect(apvts.getRawParameterValue("track_0_pan") != nullptr);
         expect(apvts.getRawParameterValue("track_0_mute") != nullptr);
         expect(apvts.getRawParameterValue("track_0_solo") != nullptr);
+
+        beginTest("read params in process (basic test)");
+        apvts.getRawParameterValue("track_0_vol")->store(-12.0f);
+        apvts.getRawParameterValue("track_0_pan")->store(0.25f);
+
+        juce::AudioBuffer<float> out(2, 64);
+        std::vector<juce::AudioBuffer<float>*> inputs;
+        mixer.process(inputs, out);
+
+        expect(mixer.getLastVolDb(0) == -12.0f);
+        expect(mixer.getLastPan(0) == 0.25f);
     }
 };
 

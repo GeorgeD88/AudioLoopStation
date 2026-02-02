@@ -19,6 +19,8 @@ public:
     void attachParameters(juce::AudioProcessorValueTreeState& apvts);
     void process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
                  juce::AudioBuffer<float>& masterOutput);
+    float getLastVolDb(int track) const;
+    float getLastPan(int track) const;
 
 private:
     std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> volParams{};
@@ -28,6 +30,8 @@ private:
     std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> soloParams{};
 
     std::array<juce::LinearSmoothedValue<float>, TrackConfig::MAX_TRACKS> volumeSmoothers;
+    std::array<float, TrackConfig::MAX_TRACKS> lastVolDb{};
+    std::array<float, TrackConfig::MAX_TRACKS> lastPan{};
 
     double sampleRate = 0.0;
     int blockSize = 0;

@@ -35,7 +35,10 @@ void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
         panParams[i]  = apvts.getRawParameterValue("track_" + idx + "_pan");
         muteParams[i] = apvts.getRawParameterValue("track_" + idx + "_mute");
         soloParams[i] = apvts.getRawParameterValue("track_" + idx + "_solo");
+
     }
+
+    // TODO: double-check these IDs with Maddox
 }
 
 void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
@@ -47,7 +50,39 @@ void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
     if (masterOutput.getNumSamples() == 0)
         return;
 
+    // read params per block (audio thread)
+    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    {
+        float volDb = 0.0f;
+        float pan = 0.0f;
+
+        if (volParams[i] != nullptr)
+            volDb = volParams[i]->load();
+
+        if (panParams[i] != nullptr)
+            pan = panParams[i]->load();
+
+        lastVolDb[i] = volDb;
+        lastPan[i] = pan;
+
+        juce::ignoreUnused(volDb, pan);
+    }
+
     masterOutput.clear();
+}
+
+float MixerEngine::getLastVolDb(int track) const
+{
+    if (track < 0 || track >= TrackConfig::MAX_TRACKS)
+        return 0.0f;
+    return lastVolDb[track];
+}
+
+float MixerEngine::getLastPan(int track) const
+{
+    if (track < 0 || track >= TrackConfig::MAX_TRACKS)
+        return 0.0f;
+    return lastPan[track];
 }
 
 bool MixerEngine::isAnySoloActive() const

@@ -72,11 +72,20 @@ public:
         apvts.getRawParameterValue("track_0_pan")->store(0.25f);
 
         juce::AudioBuffer<float> out(2, 64);
+        juce::AudioBuffer<float> track0(2, 64);
+        track0.clear();
+        track0.applyGain(1.0f);
         std::vector<juce::AudioBuffer<float>*> inputs;
+        inputs.push_back(&track0);
         mixer.process(inputs, out);
 
         expect(mixer.getLastVolDb(0) == -12.0f);
         expect(mixer.getLastPan(0) == 0.25f);
+
+        beginTest("volume smoothing changes buffer ");
+        auto firstSample = track0.getSample(0, 0);
+        auto lastSample = track0.getSample(0, track0.getNumSamples() - 1);
+        expect(lastSample < firstSample);
     }
 };
 

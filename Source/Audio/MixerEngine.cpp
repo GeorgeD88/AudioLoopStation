@@ -21,7 +21,10 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
     blockSize = samplesPerBlock;
 
     for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    {
+        volumeSmoothers[i].reset(sampleRate, 0.01); // ~10ms
         volumeSmoothers[i].setCurrentAndTargetValue(1.0f);
+    }
 }
 
 void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
@@ -44,11 +47,11 @@ void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
 void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
                           juce::AudioBuffer<float>& masterOutput)
 {
-    // stub: just clear output for now
-    juce::ignoreUnused(inputTracks);
-
+    // stub: only smoothing for now, still clearing output
     if (masterOutput.getNumSamples() == 0)
         return;
+
+    int numSamples = masterOutput.getNumSamples();
 
     // read params per block (audio thread)
     for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
@@ -64,6 +67,20 @@ void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
 
         lastVolDb[i] = volDb;
         lastPan[i] = pan;
+
+        float gain = juce::Decibels::decibelsToGain(volDb);
+        volumeSmoothers[i].setTargetValue(gain);
+
+        float startGain = volumeSmoothers[i].getCurrentValue();
+        volumeSmoothers[i].skip(numSamples);
+        float endGain = volumeSmoothers[i].getCurrentValue();
+
+        if (i < static_cast<int>(inputTracks.size()) && inputTracks[i] != nullptr)
+        {
+            auto* track = inputTracks[i];
+            for (int ch = 0; ch < track->getNumChannels(); ++ch)
+                track->applyGainRamp(ch, 0, numSamples, startGain, endGain);
+        }
 
         juce::ignoreUnused(volDb, pan);
     }

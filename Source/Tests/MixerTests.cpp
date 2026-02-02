@@ -60,6 +60,7 @@ public:
 
         MixerEngine mixer;
         mixer.attachParameters(apvts);
+        mixer.prepare(48000.0, 64);
 
         // TODO: make real checks later (gain/pan stuff)
         expect(apvts.getRawParameterValue("track_0_vol") != nullptr);
@@ -73,8 +74,12 @@ public:
 
         juce::AudioBuffer<float> out(2, 64);
         juce::AudioBuffer<float> track0(2, 64);
-        track0.clear();
-        track0.applyGain(1.0f);
+        for (int ch = 0; ch < track0.getNumChannels(); ++ch)
+        {
+            auto* data = track0.getWritePointer(ch);
+            for (int s = 0; s < track0.getNumSamples(); ++s)
+                data[s] = 1.0f;
+        }
         std::vector<juce::AudioBuffer<float>*> inputs;
         inputs.push_back(&track0);
         mixer.process(inputs, out);

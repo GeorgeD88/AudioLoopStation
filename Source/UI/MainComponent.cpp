@@ -1,7 +1,8 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent()
+MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
+    : trackControlPanel(processor.getApvts())
 {
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);

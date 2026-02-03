@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
+#include "Utils/TrackConfig.h"
 
 //==============================================================================
 class AudioLoopStationAudioProcessor final : public juce::AudioProcessor
@@ -54,10 +55,19 @@ public:
     juce::AudioTransportSource& getTransportSource() { return transportSource; }
     juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
 
+    // APVTS access
+    juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
+
+    // Parameter creation
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
 private:
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioTransportSource transportSource;
+
+    // APVTS for track parameters
+    juce::AudioProcessorValueTreeState apvts;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationAudioProcessor)

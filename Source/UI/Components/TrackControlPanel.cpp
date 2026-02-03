@@ -1,7 +1,8 @@
 #include "TrackControlPanel.h"
 
 //==============================================================================
-TrackControlPanel::TrackControlPanel()
+TrackControlPanel::TrackControlPanel(juce::AudioProcessorValueTreeState& apvtsRef)
+    : apvts(apvtsRef)
 {
     setupTrackControls();
 }
@@ -43,10 +44,41 @@ void TrackControlPanel::setupTrackControls()
         controls.recordArmButton.setClickingTogglesState(true);
         addAndMakeVisible(controls.recordArmButton);
 
+        // Mute button
+        controls.muteButton.setButtonText("M");
+        controls.muteButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        controls.muteButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
+        controls.muteButton.setClickingTogglesState(true);
+        addAndMakeVisible(controls.muteButton);
+
+        // Solo button
+        controls.soloButton.setButtonText("S");
+        controls.soloButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        controls.soloButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow);
+        controls.soloButton.setClickingTogglesState(true);
+        addAndMakeVisible(controls.soloButton);
+
         // Clear button
         controls.clearButton.setButtonText("CLEAR");
         controls.clearButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
         addAndMakeVisible(controls.clearButton);
+
+        // Create APVTS attachments
+        juce::String trackPrefix = "Track" + juce::String(i + 1) + "_";
+
+        volumeAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            apvts, trackPrefix + "Volume", controls.volumeSlider));
+
+        panAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            apvts, trackPrefix + "Pan", controls.panSlider));
+
+        muteAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            apvts, trackPrefix + "Mute", controls.muteButton));
+
+        soloAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            apvts, trackPrefix + "Solo", controls.soloButton));
+
+        // Note: recordArmButton and clearButton are not connected to APVTS (they're for recording/clearing functionality)
     }
 }
 
@@ -92,11 +124,17 @@ void TrackControlPanel::resized()
         auto panHeight = 30;
         controls.panSlider.setBounds(trackBounds.removeFromTop(panHeight).reduced(2));
 
-        // Buttons at the bottom
-        auto buttonHeight = 25;
-        auto buttonBounds = trackBounds.removeFromTop(buttonHeight);
+        // Buttons at the bottom (2 rows of 2 buttons each)
+        auto buttonRowHeight = 20;
+        auto firstRow = trackBounds.removeFromTop(buttonRowHeight);
+        auto secondRow = trackBounds.removeFromTop(buttonRowHeight);
 
-        controls.recordArmButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 2).reduced(1));
-        controls.clearButton.setBounds(buttonBounds.reduced(1));
+        // First row: Record Arm and Mute
+        controls.recordArmButton.setBounds(firstRow.removeFromLeft(firstRow.getWidth() / 2).reduced(1));
+        controls.muteButton.setBounds(firstRow.reduced(1));
+
+        // Second row: Solo and Clear
+        controls.soloButton.setBounds(secondRow.removeFromLeft(secondRow.getWidth() / 2).reduced(1));
+        controls.clearButton.setBounds(secondRow.reduced(1));
     }
 }

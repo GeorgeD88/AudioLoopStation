@@ -35,6 +35,8 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
+        Source/Audio/CircularBuffer.h
+        Source/Audio/CircularBuffer.cpp
         Source/Audio/AudioEngine.cpp
         Source/Audio/AudioEngine.h
         Source/Audio/LoopManager.cpp

@@ -1,20 +1,13 @@
 #pragma once
-
 #include "PluginProcessor.h"
 #include "UI/MainComponent.h"
 
-//==============================================================================
-class AudioLoopStationEditor final : public juce::AudioProcessorEditor,
-                                     public juce::Timer
+class AudioLoopStationEditor : public juce::AudioProcessorEditor
 {
 public:
-    explicit AudioLoopStationEditor (AudioLoopStationAudioProcessor&);
-    ~AudioLoopStationEditor() override;
+    explicit AudioLoopStationEditor(AudioLoopStationAudioProcessor&);
 
-    //==============================================================================
-    void paint (juce::Graphics&) override;
-    void resized() override;
-    void timerCallback() override;
+    void resized() override { mainComponent.setBounds(getLocalBounds()); }
 
     // These have be declared here so the PluginEditor cpp file can define them
     void openButtonClicked();

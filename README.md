@@ -122,6 +122,21 @@ Notes:
 #### Run the Application
 TBD
 
+## Tests (Basic)
+
+Build the test target (Xcode generator):
+```bash
+cmake --build build/xcode --config Debug --target AudioLoopStation_Tests
+```
+
+Run the tests:
+```bash
+./build/xcode/AudioLoopStation_Tests_artefacts/Debug/AudioLoopStation_Tests
+```
+
+Alternatively:
+- In Xcode, pick the `AudioLoopStation_Tests` scheme and Run.
+
 ## Project Structure
 
 TBD

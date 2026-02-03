@@ -4,6 +4,7 @@
 #include "../PluginProcessor.h"
 #include "Components/TransportComponent.h"
 #include "Components/TrackControlPanel.h"
+#include "../PluginProcessor.h"
 
 //==============================================================================
 class MainComponent final : public juce::Component
@@ -17,6 +18,7 @@ public:
     void resized() override;
 
 private:
+    AudioLoopStationAudioProcessor& audioProcessor;
     TransportComponent transportComponent;
     TrackControlPanel trackControlPanel;
 

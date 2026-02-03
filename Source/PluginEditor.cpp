@@ -5,10 +5,7 @@
 AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
         : AudioProcessorEditor (p), audioProcessor (p), mainComponent(p)
 {
-    addAndMakeVisible (&openButton);
-    openButton.setButtonText ("Open...");
-    openButton.onClick = [this] { openButtonClicked(); };
-
+    setSize(1200, 900);
     addAndMakeVisible(mainComponent);
 
     // Make sure that before the constructor has finished, you've set the

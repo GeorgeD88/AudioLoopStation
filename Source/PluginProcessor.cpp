@@ -2,6 +2,67 @@
 #include "PluginEditor.h"
 
 //==============================================================================
+juce::AudioProcessorValueTreeState::ParameterLayout AudioLoopStationAudioProcessor::createParameterLayout()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    for (int trackIndex = 0; trackIndex < TrackConfig::MAX_TRACKS; ++trackIndex)
+    {
+        juce::String trackPrefix = "Track" + juce::String(trackIndex + 1) + "_";
+
+        // Volume parameter (0.0 to 1.0, default 0.8)
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID(trackPrefix + "Volume", 1),
+            trackPrefix + "Volume",
+            juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+            0.8f,
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value * 100.0f, 1) + "%"; },
+            nullptr
+        ));
+
+        // Pan parameter (-1.0 to 1.0, default 0.0)
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID(trackPrefix + "Pan", 1),
+            trackPrefix + "Pan",
+            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f),
+            0.0f,
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) {
+                if (value < -0.01f) return juce::String(value * 100.0f, 1) + "% L";
+                if (value > 0.01f) return juce::String(value * 100.0f, 1) + "% R";
+                return juce::String("Center");
+            },
+            nullptr
+        ));
+
+        // Mute parameter (bool, default false)
+        layout.add(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID(trackPrefix + "Mute", 1),
+            trackPrefix + "Mute",
+            false,
+            juce::String(),
+            [](bool value, int) { return value ? "Muted" : "Unmuted"; },
+            nullptr
+        ));
+
+        // Solo parameter (bool, default false)
+        layout.add(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID(trackPrefix + "Solo", 1),
+            trackPrefix + "Solo",
+            false,
+            juce::String(),
+            [](bool value, int) { return value ? "Soloed" : "Not Soloed"; },
+            nullptr
+        ));
+    }
+
+    return layout;
+}
+
+//==============================================================================
 AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
         : AudioProcessor (BusesProperties()
 #if ! JucePlugin_IsMidiEffect
@@ -10,7 +71,8 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
 #endif
                                   .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
 #endif
-)
+),
+        apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
     formatManager.registerBasicFormats();
 }
@@ -152,12 +214,18 @@ juce::AudioProcessorEditor* AudioLoopStationAudioProcessor::createEditor()
 //==============================================================================
 void AudioLoopStationAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::ignoreUnused (destData);
+    auto state = apvts.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void AudioLoopStationAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::ignoreUnused (data, sizeInBytes);
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+
+    if (xmlState.get() != nullptr)
+        if (xmlState->hasTagName(apvts.state.getType()))
+            apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
 }
 
 void AudioLoopStationAudioProcessor::loadFile(const juce::File& audioFile)

@@ -33,15 +33,15 @@ static juce::AudioProcessorValueTreeState::ParameterLayout createMockLayout()
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     // TODO: add tracks 1-3 later, this is just to get started
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "track_0_vol", "track_0_vol",
-            juce::NormalisableRange<float>(-60.0f, 6.0f, 0.01f), -6.0f));
+            "Track1_Volume", "Track1_Volume",
+            juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.8f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "track_0_pan", "track_0_pan",
+            "Track1_Pan", "Track1_Pan",
             juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
     layout.add(std::make_unique<juce::AudioParameterBool>(
-            "track_0_mute", "track_0_mute", false));
+            "Track1_Mute", "Track1_Mute", false));
     layout.add(std::make_unique<juce::AudioParameterBool>(
-            "track_0_solo", "track_0_solo", false));
+            "Track1_Solo", "Track1_Solo", false));
 
     return layout;
 }
@@ -63,14 +63,14 @@ public:
         mixer.prepare(48000.0, 64);
 
         // TODO: make real checks later (gain/pan stuff)
-        expect(apvts.getRawParameterValue("track_0_vol") != nullptr);
-        expect(apvts.getRawParameterValue("track_0_pan") != nullptr);
-        expect(apvts.getRawParameterValue("track_0_mute") != nullptr);
-        expect(apvts.getRawParameterValue("track_0_solo") != nullptr);
+        expect(apvts.getRawParameterValue("Track1_Volume") != nullptr);
+        expect(apvts.getRawParameterValue("Track1_Pan") != nullptr);
+        expect(apvts.getRawParameterValue("Track1_Mute") != nullptr);
+        expect(apvts.getRawParameterValue("Track1_Solo") != nullptr);
 
         beginTest("read params in process (basic test)");
-        apvts.getRawParameterValue("track_0_vol")->store(-12.0f);
-        apvts.getRawParameterValue("track_0_pan")->store(0.25f);
+        apvts.getRawParameterValue("Track1_Volume")->store(0.5f);
+        apvts.getRawParameterValue("Track1_Pan")->store(0.25f);
 
         juce::AudioBuffer<float> out(2, 64);
         juce::AudioBuffer<float> track0(2, 64);
@@ -84,7 +84,7 @@ public:
         inputs.push_back(&track0);
         mixer.process(inputs, out);
 
-        expect(mixer.getLastVolDb(0) == -12.0f);
+        expect(mixer.getLastVolDb(0) == 0.5f);
         expect(mixer.getLastPan(0) == 0.25f);
 
         beginTest("volume smoothing changes buffer ");

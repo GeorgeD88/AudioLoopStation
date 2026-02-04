@@ -129,4 +129,5 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_processors
+        juce::juce_dsp
 )

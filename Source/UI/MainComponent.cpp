@@ -2,7 +2,8 @@
 
 //==============================================================================
 MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
-    : trackControlPanel(processor.getApvts())
+    : audioProcessor(processor),
+     trackControlPanel(processor.getApvts())
 {
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);

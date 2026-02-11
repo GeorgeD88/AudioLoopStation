@@ -5,7 +5,6 @@
 AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
         : AudioProcessorEditor (p), audioProcessor (p), mainComponent(p)
 {
-    setSize(1200, 900);
     addAndMakeVisible(mainComponent);
 
     // Make sure that before the constructor has finished, you've set the
@@ -24,7 +23,11 @@ void AudioLoopStationEditor::paint (juce::Graphics& g)
 
 void AudioLoopStationEditor::playButtonClicked()
 {
-    mainComponent.setBounds(getLocalBounds());
+    // TODO: Connect this to the AudioProcessor to start playback
+    // Example: audioProcessor.startPlayback();
+
+    // Optional: Update UI state (e.g. change button text/color)
+    updateTransportButtons();
 }
 
 void AudioLoopStationEditor::stopButtonClicked()

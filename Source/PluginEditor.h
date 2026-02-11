@@ -2,14 +2,26 @@
 #include "PluginProcessor.h"
 #include "UI/MainComponent.h"
 
-class AudioLoopStationEditor : public juce::AudioProcessorEditor
+// Inherit from juce::Timer so we can use timerCallback
+class AudioLoopStationEditor : public juce::AudioProcessorEditor,
+                               public juce::Timer
 {
 public:
     explicit AudioLoopStationEditor(AudioLoopStationAudioProcessor&);
 
-    void resized() override { mainComponent.setBounds(getLocalBounds()); }
+    // Declare the Destructor (don't define it here)
+    ~AudioLoopStationEditor() override;
 
-    // These have be declared here so the PluginEditor cpp file can define them
+    // Declare Paint (don't define it here)
+    void paint(juce::Graphics&) override;
+
+    // Declare Resized
+    void resized() override;
+
+    // Declare TimerCallback
+    void timerCallback() override;
+
+    // Custom functions
     void openButtonClicked();
     void playButtonClicked();
     void stopButtonClicked();
@@ -19,12 +31,10 @@ public:
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
 
-    // Our PluginEditor cpp file uses them!
     juce::TextButton openButton;
     juce::ToggleButton loopingToggle;
 
     MainComponent mainComponent;
 
-    // Fixed the name here to match the class name
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationEditor)
 };

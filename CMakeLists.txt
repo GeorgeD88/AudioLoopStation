@@ -52,6 +52,8 @@ set(SourceFiles
         # UI - Subcomponents
         Source/UI/Components/TransportComponent.cpp
         Source/UI/Components/TransportComponent.h
+        Source/UI/Components/TrackStripComponent.cpp
+        Source/UI/Components/TrackStripComponent.h
         Source/UI/Components/TrackControlPanel.cpp
         Source/UI/Components/TrackControlPanel.h
 

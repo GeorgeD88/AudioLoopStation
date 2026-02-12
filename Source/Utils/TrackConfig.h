@@ -5,6 +5,10 @@
 # pragma once
 
 namespace TrackConfig {
+
+    // Sync Engine
+    constexpr float DEFAULT_BPM = 120.0f;
+
     // Track Configuration
     constexpr int INVALID_TRACK_ID = -1;
     constexpr int FIRST_TRACK_ID = 0;

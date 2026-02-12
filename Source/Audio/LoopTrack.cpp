@@ -1,6 +1,9 @@
 //
 // Created by Vincewa Tran on 1/28/26.
-//
+// Represents a single independent loop track with a state machine
+// - Integrate the CircularBuffer + volume/pan + record/play state
+// - Where audio data gets processed.
+// - DSP and effects chain will eventually go here as well.
 
 #include "LoopTrack.h"
 
@@ -13,6 +16,15 @@ LoopTrack::~LoopTrack() {
     releaseResources();
 }
 
+/**
+ * Prepares the track for audio processing
+ * @param sampleRate - Current audio sample rate (e.g., 48000 Hz)
+ * @param samplesPerBlock - Buffer size for each process callback
+ * @param numChannels - Number of audio channels (1 for mono, 2 for stereo)
+ *
+ * Called on the audio thread during prepareToPlay()
+ * Allocates buffers and initializes DSP components
+ */
 void LoopTrack::prepareToPlay(double sampleRate, int samplesPerBlock, int numChannels) {
 
     // Setup DSP Components
@@ -24,16 +36,32 @@ void LoopTrack::prepareToPlay(double sampleRate, int samplesPerBlock, int numCha
     buffer.prepareToPlay(sampleRate, numChannels, TrackConfig::MAX_LOOP_LENGTH_SECONDS);
     undoBuffer.prepareToPlay(sampleRate, numChannels, TrackConfig::MAX_LOOP_LENGTH_SECONDS);
 
+    // Allocate working buffers for audio thread
     inputCopy.setSize(numChannels, samplesPerBlock);
     playbackBuffer.setSize(numChannels, samplesPerBlock);
 }
 
+/**
+ * Releases audio resources when playback stops
+ */
 void LoopTrack::releaseResources() {
     buffer.releaseResources();
     inputCopy.setSize(0, 0);
     playbackBuffer.setSize(0, 0);
 }
 
+/**
+ * Main audio processing callback
+ * @param input - Live input from audio interface
+ * @param output - Buffer to fill with processed track audio
+ * @param isSoloActive - Whether any track in the project is soloed
+ *
+ * Called on the real-time audio thread - must be lock-free and non-blocking
+ * Handles three main operations:
+ * 1. Recording - Writes input to circular buffer
+ * 2. Playback - Reads from buffer with DSP processing
+ * 3. Input Monitoring - Passes live input when armed
+ */
 void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioBuffer<float> &output, bool isSoloActive) {
 
     const int numSamples = input.getNumSamples();
@@ -88,7 +116,7 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioB
             // Apply DSP (volume, pan)
             applyDspProcessing(playbackBuffer);
 
-            // Add to output
+            // Mix processed audio into output buffer
             float gain = juce::Decibels::decibelsToGain(currentVolumeDb.load());
 
             for (int ch = 0; ch < output.getNumChannels(); ++ch) {
@@ -100,6 +128,7 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioB
     }
 
     // === Input Monitoring ===
+    // When armed but not recording, pass live input through at reduced gain
     if (isArmedForRecording.load() && !isRecordingActive.load()) {
         constexpr float monitorGain = 0.5f;
         for (int ch = 0; ch < output.getNumChannels(); ++ch) {
@@ -109,13 +138,21 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioB
     }
 }
 
+/**
+ * Applies volume and pan DSP to an audio buffer
+ * @param bufferToProcess - Audio buffer to process in-place
+ *
+ * Features:
+ * - Linear ramp for volume changes (avoids clicks/pops)
+ * - Equal-power panning for stereo signals
+ */
 void LoopTrack::applyDspProcessing(juce::AudioBuffer<float> &bufferToProcess) {
 
-    // TODO: apply volume smoothing, apply panning for stereo buffers
     const auto numSamples = bufferToProcess.getNumSamples();
     const auto numChannels = bufferToProcess.getNumChannels();
 
     // Apply volume smoothing
+    // Convert dB to linear gain and apply ramp
     auto targetGain = juce::Decibels::decibelsToGain(currentVolumeDb.load());
     volumeSmoother.setTargetValue(targetGain);
 
@@ -211,6 +248,10 @@ void LoopTrack::setSolo(bool shouldSolo) {
     soloState = shouldSolo;
 }
 
+/**
+ * Clears all track data and resets to empty state
+ * Safe to call from any thread
+ */
 void LoopTrack::clear() {
     stopRecording();
     stopPlayback();
@@ -242,7 +283,16 @@ void LoopTrack::applyReverse(juce::AudioBuffer<float> &buffer) {
     }
 }
 
+/**
+ * Static helper: Rotates audio buffer by offset samples
+ * @param audioBuffer - Buffer to rotate
+ * @param offset - Number of samples to shift (positive = later, negative = earlier)
+ *
+ * Implements circular buffer rotation for slip feature
+ * Example: [1,2,3,4] with offset=2 becomes [3,4,1,2]
+ */
 void LoopTrack::applySlip(juce::AudioBuffer<float>& buffer) {
+
     int offset = slipOffset.load();
     if (offset == 0) return;
 
@@ -261,8 +311,12 @@ void LoopTrack::applySlip(juce::AudioBuffer<float>& buffer) {
         auto* src = temp.getReadPointer(ch);
 
         // Copy second part to beginning
-        std::memcpy(dest, src + offset, (numSamples - offset) * sizeof(float));
+        std::memcpy(dest,
+                    src + offset,
+                    static_cast<size_t>(numSamples - offset) * sizeof(float));
         // Copy first part to end
-        std::memcpy(dest + (numSamples - offset), src, offset * sizeof(float));
+        std::memcpy(dest + (numSamples - offset),
+                    src,
+                    static_cast<size_t>(offset) * sizeof(float));
     }
 }

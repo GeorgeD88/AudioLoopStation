@@ -63,7 +63,7 @@ public:
     // === Getters (for UI and manager) ===
     State getState() const { return currentState.load(); }
     int getTrackId() const {return trackId; }
-    int getLoopLengthSamples() const { return getLoopLengthSamples(); }
+    int getLoopLengthSamples() const { return loopLengthSamples; }
     bool hasLoop() const { return getLoopLengthSamples() > 0; }
     bool isEmpty() const { return buffer.isEmpty(); }
     bool isArmed() const { return isArmedForRecording.load(); }

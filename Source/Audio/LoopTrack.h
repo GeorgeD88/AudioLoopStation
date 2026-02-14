@@ -6,14 +6,26 @@
 // - DSP and effects chain will eventually go here as well.
 //
 #pragma once
+// JUCE modules
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_dsp/juce_dsp.h"
-
+// Gin Modules
+#include "gin_dsp/gin_dsp.h"
 // Project includes
+#include "SyncEngine.h"
 #include "../Utils/TrackConfig.h"
 #include "CircularBuffer.h"
 
+/**
+ * Represents a single loop track with recording, playback, and DSP.
+ *
+ * Gin components used directly:
+ * - gin::AudioFifo: Lock-free recording buffer
+ * - gin::SamplePlayer: Professional playback engine
+ * - gin::SmoothedValue: Click-free parameter changes
+ * - gin::ScratchBuffer: Temporary buffers from pool (no allocations!)
+ */
 class LoopTrack {
 public:
 
@@ -34,16 +46,16 @@ public:
     void releaseResources();
     void processBlock(const juce::AudioBuffer<float>& input,
                       juce::AudioBuffer<float>& output,
-                      bool isSoloActive);                       // for mute logic
+                      const SyncEngine& syncEngine);                       // for mute logic
 
     // === Transport Controls
     void armForRecording(bool armed);
-    void startRecording();
+    void startRecording(juce::int64  globalSample);
     void stopRecording();
     void startPlayback();
     void stopPlayback();
-    // TODO:: startOverdubbing(); and stopOverdubbing();
     void stop();
+    void clear();                                               // Clear loop
 
     // === DSP Controls (per Track)===
     void setVolumeDb(float volumeDb);
@@ -52,43 +64,40 @@ public:
     void setSolo(bool soloed);
     void setReverse(bool reverse);                              // REQUIRED FEATURE 2 from OSU project page
     void setSlip(int samples);                                  // REQUIRED FEATURE 3 from OSU project page
+    void setLoopLength (int samples);
 
     // === Loop Manipulation
     void multiplyLoop();                                        // double loop length
     void divideLoop();                                          // halve loop length
     void performUndo();                                         // Undo last op
-    void clear();                                               // Clear loop
 
 
     // === Getters (for UI and manager) ===
-    State getState() const { return currentState.load(); }
-    int getTrackId() const {return trackId; }
-    int getLoopLengthSamples() const { return loopLengthSamples; }
-    bool hasLoop() const { return getLoopLengthSamples() > 0; }
-    bool isEmpty() const { return buffer.isEmpty(); }
-    bool isArmed() const { return isArmedForRecording.load(); }
-    bool isMuted() const { return muteState.load(); }
-    bool canUndo() const { return hasUndo; }
+    State getState() const noexcept { return currentState.load(); }
+    int getTrackId() const noexcept {return trackId; }
+    int getLoopLengthSamples() const noexcept { loopLengthSamples.load(); }
+    bool hasLoop() const noexcept { return loopLengthSamples.load() > 0; }
+    bool isArmed() const noexcept { return isArmedForRecording.load(); }
+    bool isMuted() const noexcept { return muteState.load(); }
+    bool isSoloed() const noexcept { return soloState.load(); }
+    float getCurrentVolumeDb() const noexcept { return currentVolumeDb.load(); }
+    float getCurrentPan() const noexcept { return currentPan.load(); }
+    juce::String getStateString() const;
 
     // === Sync info (for manager to read/write) ===
     void setRecordingStartGlobalSample(juce::int64 sample) {
         recordingStartGlobalSample = sample;
     }
-    juce::int64 getRecordingStartGlobalSample() const {
-        return recordingStartGlobalSample;
+    juce::int64 getRecordingStartGlobalSample() const noexcept {
+        return recordingStartGlobalSample.load();
     }
-
-    void setTargetMultiplier(float mult) {
-        targetMultiplier = juce::jlimit(1.0f/64.0f, 64.0f, mult);
-    }
-    float getTargetMultiplier() const { return targetMultiplier; }
-
 
 private:
-    // === Core components ===
-    CircularBuffer buffer;
-    CircularBuffer undoBuffer;
+    // === Core class components===
     const int trackId;
+    gin::AudioFifo recordingBuffer;
+    gin::AudioFifo undoBuffer;
+    gin::SamplePlayer player;
 
     // === States (atomic for thread safety) ===
     std::atomic<State> currentState {State::Empty };
@@ -97,36 +106,33 @@ private:
     std::atomic<bool> isPlaybackActive { false };
 
     // === Loop metadata ===
-    int loopLengthSamples = 0;                          // Current loop length measured by sample rate
-    int playbackPosition = 0;                           // Current playback position
+    std::atomic<int> loopLengthSamples {0 };                          // Current loop length measured by sample rate
+    std::atomic<juce::int64> recordingStartGlobalSample { 0 };
 
-    // === Sync ===
-    juce::int64 recordingStartGlobalSample = 0;
 
     // === DSP ===
-    juce::LinearSmoothedValue<float> volumeSmoother;
+    gin::EasedValueSmoother<float, gin::QuadraticOutEasing> volumeSmoother;
+    gin::EasedValueSmoother<float, gin::QuadraticOutEasing> panSmoother;
     std::atomic<float> currentVolumeDb { TrackConfig::DEFAULT_VOLUME_DB };
     std::atomic<float> currentPan { TrackConfig::DEFAULT_PAN };
     std::atomic<bool> muteState { false };
     std::atomic<bool> soloState { false };
     std::atomic<bool> reverseState { false };
-    std::atomic<bool> slipOffset { false };
+    std::atomic<int> slipOffset { 0 };
 
-    // === Other features and Undo ===
-    float targetMultiplier = 1.0f;                      // for variable length recording
+    // === Sample rate ===
+    double sampleRate = TrackConfig::DEFAULT_SAMPLE_RATE;
+
+    // === Undo ===
     bool hasUndo = false;
-    int undoLoopLengthSamples = 0;
-
-    // === Temporary processing buffers ===
-    juce::AudioBuffer<float> inputCopy;
-    juce::AudioBuffer<float> playbackBuffer;
+    int undoLoopLength = 0;
 
     // === Private Helpers ===
-    void saveUndo();
-    void applyDspProcessing(juce::AudioBuffer<float>& buffer);
-    void applyCrossfade(int fadeSamples = 128);
     void applyReverse(juce::AudioBuffer<float>& buffer);  // Helper for reverse
     void applySlip(juce::AudioBuffer<float>& buffer);     // Helper for slip
+    void applyDspProcessing(juce::AudioBuffer<float>& buffer);
+    void saveUndo();
+    void loadRecordingToPlayer();
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopTrack);

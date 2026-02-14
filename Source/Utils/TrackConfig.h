@@ -24,10 +24,12 @@ namespace TrackConfig {
     constexpr float MIN_VOLUME_DB = -60.0f;
     constexpr float MAX_VOLUME_DB = 6.0f;
     constexpr float DEFAULT_VOLUME_DB = 0.8f;              // -6dB default
+    constexpr double_t VOLUME_FADE_SECONDS = 0.05f;
 
     constexpr float MIN_PAN = -1.0f;                    // Full left
     constexpr float MAX_PAN = 1.0f;                     // Full right
     constexpr float DEFAULT_PAN = 0.0f;                 // Center
+    constexpr double_t PAN_FADE_SECONDS = 0.03f;
 
     constexpr float MIN_PITCH_SEMITONES = -12.0f;
     constexpr float MAX_PITCH_SEMITONES = 12.0f;

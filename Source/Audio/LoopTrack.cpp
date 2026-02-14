@@ -7,13 +7,27 @@
 
 #include "LoopTrack.h"
 
-LoopTrack::LoopTrack(int id) : trackId(id), currentVolumeDb(juce::Decibels::gainToDecibels(TrackConfig::DEFAULT_VOLUME_DB)),
-currentPan(TrackConfig::DEFAULT_PAN)
-{
+LoopTrack::LoopTrack(int id) : trackId(id),
+recordingBuffer(2,static_cast<int>(TrackConfig::MAX_LOOP_LENGTH_SECONDS * TrackConfig::DEFAULT_SAMPLE_RATE)),
+undoBuffer(2,static_cast<int>(TrackConfig::MAX_LOOP_LENGTH_SECONDS * TrackConfig::DEFAULT_SAMPLE_RATE)) {
+
+    // Configure Gin's SamplePlayer
+    player.setLooping(true);
+    player.setCrossfadeSamples(TrackConfig::DEFAULT_BUFFER_SIZE);       // Buffer size of 256
+
 }
 
 LoopTrack::~LoopTrack() {
     releaseResources();
+}
+
+/**
+ * Releases audio resources when playback stops
+ */
+void LoopTrack::releaseResources() {
+    recordingBuffer.setSize(0, 0);
+    undoBuffer.setSize(0, 0);
+    player.reset();
 }
 
 /**
@@ -25,29 +39,34 @@ LoopTrack::~LoopTrack() {
  * Called on the audio thread during prepareToPlay()
  * Allocates buffers and initializes DSP components
  */
-void LoopTrack::prepareToPlay(double sampleRate, int samplesPerBlock, int numChannels) {
+void LoopTrack::prepareToPlay(double sr, int /*samplesPerBlock*/, int numChannels) {
 
-    // Setup DSP Components
-    volumeSmoother.reset(sampleRate, 0.05);
-    volumeSmoother.setCurrentAndTargetValue(
+    sampleRate = sr;
+
+    // Resize buffers for actual sample rate
+    int bufferSize = static_cast<int>(sampleRate * TrackConfig::MAX_LOOP_LENGTH_SECONDS);
+    recordingBuffer.setSize(numChannels, bufferSize);
+    undoBuffer.setSize(numChannels, bufferSize);
+
+    // Reset buffers
+    recordingBuffer.reset();
+    undoBuffer.reset();
+
+    // Configure SamplePlayer (GIN)
+    player.setPlaybackSampleRate(sampleRate);
+    player.reset();
+
+    // 50ms volume fade
+    volumeSmoother.setSampleRate(sampleRate);
+    volumeSmoother.setTime(TrackConfig::VOLUME_FADE_SECONDS);
+    volumeSmoother.setValueUnsmoothed(
             juce::Decibels::decibelsToGain(currentVolumeDb.load()));
 
-    // Prepare circular buffer (stereo by default)
-    buffer.prepareToPlay(sampleRate, numChannels, TrackConfig::MAX_LOOP_LENGTH_SECONDS);
-    undoBuffer.prepareToPlay(sampleRate, numChannels, TrackConfig::MAX_LOOP_LENGTH_SECONDS);
-
-    // Allocate working buffers for audio thread
-    inputCopy.setSize(numChannels, samplesPerBlock);
-    playbackBuffer.setSize(numChannels, samplesPerBlock);
-}
-
-/**
- * Releases audio resources when playback stops
- */
-void LoopTrack::releaseResources() {
-    buffer.releaseResources();
-    inputCopy.setSize(0, 0);
-    playbackBuffer.setSize(0, 0);
+    // 30ms pan fade
+    volumeSmoother.setSampleRate(sampleRate);
+    volumeSmoother.setTime(TrackConfig::PAN_FADE_SECONDS);
+    volumeSmoother.setValueUnsmoothed(
+            juce::Decibels::decibelsToGain(currentPan.load()));
 }
 
 /**
@@ -62,68 +81,84 @@ void LoopTrack::releaseResources() {
  * 2. Playback - Reads from buffer with DSP processing
  * 3. Input Monitoring - Passes live input when armed
  */
-void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioBuffer<float> &output, bool isSoloActive) {
+void LoopTrack::processBlock(const juce::AudioBuffer<float> &input,
+                             juce::AudioBuffer<float> &output,
+                             const SyncEngine& syncEngine) {
 
     const int numSamples = input.getNumSamples();
     State state = currentState.load();
-    // === Early exit if there's nothing for track to do ===
-    if (state == State::Stopped || (state == State::Empty && state != State::Recording))
-    {
-        return;
-    }
-
-    // === Solo/Mute Logic ===
-    bool shouldBeSilent = false;
-    if (isSoloActive) {
-        shouldBeSilent = soloState.load();
-    } else {
-        shouldBeSilent = muteState.load();
-    }
 
     // === Recording ===
-    if (state == State::Recording) {
-        inputCopy.makeCopyOf(input, true);
-        buffer.write(inputCopy);
-        playbackPosition += numSamples;
+    if (state == State::Recording && isRecordingActive.load()) {
+        // Write to FIFO
+        if (!recordingBuffer.write(input)){
+            // Buffer is full so overwrite the oldest sampled audio
+            recordingBuffer.ensureFreeSpace(numSamples);
+            recordingBuffer.write(input);
+        }
+
+        // If this is the initial input/recording in the loop
+        if (loopLengthSamples.load() == 0) {
+            int recorded = recordingBuffer.getNumReady();
+            int samplesPerBeat = syncEngine.getSamplesPerBeat();
+
+            if (samplesPerBeat > 0) {
+                // Align to nearest beat boundary
+                int alignedLength = ((recorded + samplesPerBeat -1) /
+                        samplesPerBeat) * samplesPerBeat;
+                setLoopLength(alignedLength);
+            }
+        }
     }
 
     // === Playback ===
-    if (state == State::Playing && loopLengthSamples > 0 && !shouldBeSilent)
-    {
-        // Get the current read position
-        int currentPos = buffer.getReadPosition();
+    bool shouldPlay = (state == State::Playing || state == State::Recording)
+            && hasLoop()
+            && !muteState.load()
+            && !soloState.load();
 
-        // Check if we need to reset to stay within loop bounds
-        if (currentPos >= loopLengthSamples) {
-            // Resets read positon to 0
-            buffer.resetPlayback();
+    if (shouldPlay) {
+        // If it's the first time hitting play, load the buffer into Gin's SamplePlayer
+        static bool loaded = false;
+        if (!loaded && hasLoop()) {
+            loadRecordingToPlayer();
+            player.play();
+            loaded = true;
         }
 
-        // Read audio into playback buffer
-        playbackBuffer.clear();
-        if (buffer.read(playbackBuffer)) {
+        // Get temporary buffer - NO ALLOCATION!
+        gin::ScratchBuffer playerOutput(output.getNumChannels(), numSamples);
 
-            // === Reverse ===
-            if (reverseState.load()) {
-                applyReverse(playbackBuffer);
-            }
+        // SamplePlayer handles crossfading, looping, and position tracking
+        player.processBlock(playerOutput);
 
-            // === Slip ===
-            if (slipOffset.load() != 0) {
-                applySlip(playbackBuffer);
-            }
+        // Apply Effects
+        // Slip
+        if (reverseState.load()) {
+            applyReverse(playerOutput);
+        }
 
-            // Apply DSP (volume, pan)
-            applyDspProcessing(playbackBuffer);
+        // Offset sample from the grid
+        if (slipOffset.load() != 0) {
+            applySlip(playerOutput);
+        }
 
-            // Mix processed audio into output buffer
-            float gain = juce::Decibels::decibelsToGain(currentVolumeDb.load());
+        applyDspProcessing(playerOutput);
 
-            for (int ch = 0; ch < output.getNumChannels(); ++ch) {
-                int sourceCh = ch % playbackBuffer.getNumChannels();
-                output.addFrom(ch, 0, playbackBuffer, sourceCh, 0, numSamples, gain);
-            }
+        // Mix into output
+        for (int ch = 0; ch < output.getNumChannels(); ++ch) {
+            int sourceCh = ch % playerOutput.getNumChannels();
+            output.addFrom(ch,
+                           0,
+                           playerOutput,
+                           sourceCh,
+                           0,
+                           numSamples);
+        }
 
+        // Handle loop wrap
+        if (recordingBuffer.getNumReady() < numSamples * 2) {
+            recordingBuffer.reset();
         }
     }
 
@@ -133,7 +168,13 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioB
         constexpr float monitorGain = 0.5f;
         for (int ch = 0; ch < output.getNumChannels(); ++ch) {
             int sourceCh = ch % input.getNumChannels();
-            output.addFrom(ch, 0, input, sourceCh, 0, numSamples, monitorGain);
+            output.addFrom(ch,
+                           0,
+                           input,
+                           sourceCh,
+                           0,
+                           numSamples,
+                           monitorGain);
         }
     }
 }
@@ -148,104 +189,97 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input, juce::AudioB
  */
 void LoopTrack::applyDspProcessing(juce::AudioBuffer<float> &bufferToProcess) {
 
-    const auto numSamples = bufferToProcess.getNumSamples();
-    const auto numChannels = bufferToProcess.getNumChannels();
+    const int numSamples = bufferToProcess.getNumSamples();
+    const int numChannels = bufferToProcess.getNumChannels();
 
     // Apply volume smoothing
     // Convert dB to linear gain and apply ramp
-    auto targetGain = juce::Decibels::decibelsToGain(currentVolumeDb.load());
-    volumeSmoother.setTargetValue(targetGain);
+    float targetGain = juce::Decibels::decibelsToGain(currentVolumeDb.load());
+    float targetPan = currentPan.load();
 
-    for (int ch = 0; ch < numChannels; ++ch)
+    volumeSmoother.setValue(targetGain);
+    panSmoother.setValue(targetPan);
+
+    // Apply with QuadraticOutEasing
+    for (int s = 0; s < numSamples; ++s)
     {
-        auto startGain = volumeSmoother.getCurrentValue();
-        volumeSmoother.skip(numSamples);
-        auto endGain = volumeSmoother.getCurrentValue();
+        float gain = volumeSmoother.getNextValue();
+        float pan = panSmoother.getCurrentValue();
 
-        bufferToProcess.applyGainRamp(ch, 0, numSamples, startGain, endGain);
+        if (numChannels == 2) {
+            // Stereo
+            float leftGain, rightGain;
+            if (pan <= 0.0f) {
+                leftGain = gain;
+                rightGain = gain * (1.0f + pan);
+            } else {
+                leftGain = gain * (1.0f - pan);
+                rightGain = gain;
+            }
+
+            bufferToProcess.getWritePointer(0)[s] *= leftGain;
+            bufferToProcess.getWritePointer(1)[s] *= rightGain;
+        } else {
+            // Mono - only apply volume
+        } for ( int ch = 0; ch < numChannels; ++ch) {
+            bufferToProcess.getWritePointer(ch)[s] *= gain;
+        }
     }
-
-    // Apply panning for stereo buffers
-    if(numChannels == 2 && std::abs (currentPan) > 0.001f)
-    {
-        const auto panRadians = (currentPan + 1.0f) * juce::MathConstants<float>::pi / 4.0f;
-        const auto leftGain = std::cos (panRadians);
-        const auto rightGain = std::sin (panRadians);
-
-        bufferToProcess.applyGain(0,0, numSamples, leftGain);
-        bufferToProcess.applyGain(1,1, numSamples, rightGain);
-    }
-
 }
 
 void LoopTrack::armForRecording(bool isArmed) {
     isArmedForRecording.store(isArmed);
-
-    if (!isArmed && isRecordingActive.load())
-    {
-        stopRecording();
-    }
 }
 
-void LoopTrack::startRecording() {
+void LoopTrack::startRecording(juce::int64 globalSample) {
 
     if(!isArmedForRecording.load()) return;
 
-    if (buffer.isEmpty())
-    {
-        buffer.clear();
-        buffer.resetPlayback();
-    }
-
+    recordingStartGlobalSample.store(globalSample);
     isRecordingActive.store(true);
+    currentState.store(State::Recording);
 
-    if(!isPlaybackActive.load())
-    {
-        startPlayback();
-    }
+    // Clear previous loop
+    recordingBuffer.reset();
+    loopLengthSamples.store(0);
+    player.reset();
 }
 
 void LoopTrack::stopRecording() {
     isRecordingActive.store (false);
 
-    if(buffer.isEmpty())
-    {
-        stopPlayback();
+    if (hasLoop()) {
+        currentState.store(State::Playing);
+        startPlayback();
+    } else {
+        currentState.store(State::Empty);
     }
 }
 
 void LoopTrack::startPlayback() {
+    // Check if there's anything in the buffer
+    if (!hasLoop()) return;
 
-    if (buffer.isEmpty()) return;
-
+    // Play and update state
     isPlaybackActive.store(true);
+    player.play();
+    currentState.store(State::Playing);
 }
 
 void LoopTrack::stopPlayback() {
 
     isPlaybackActive.store(false);
-    buffer.resetPlayback();
+    player.stop();
+    recordingBuffer.reset();
+
+    if (currentState.load() != State::Recording) {
+        currentState.store(hasLoop() ? State::Stopped : State::Empty);
+    }
 }
 
-void LoopTrack::setVolumeDb(float newVolumeDb) {
-
-    currentVolumeDb = juce::jlimit(TrackConfig::MIN_VOLUME_DB,
-                                   TrackConfig::MAX_VOLUME_DB,
-                                   newVolumeDb);
-}
-
-void LoopTrack::setPan(float newPan) {
-    currentPan = juce::jlimit(TrackConfig::MIN_PAN,
-                              TrackConfig::MAX_PAN,
-                              newPan);
-}
-
-void LoopTrack::setMute (bool shouldMute) {
-    muteState = shouldMute;
-}
-
-void LoopTrack::setSolo(bool shouldSolo) {
-    soloState = shouldSolo;
+void LoopTrack::stop() {
+    stopRecording();
+    stopPlayback();
 }
 
 /**
@@ -253,10 +287,10 @@ void LoopTrack::setSolo(bool shouldSolo) {
  * Safe to call from any thread
  */
 void LoopTrack::clear() {
-    stopRecording();
-    stopPlayback();
+    stop();
 
-    buffer.clear();
+    recordingBuffer.reset();
+    undoBuffer.reset();
 
     // Reset all states
     currentVolumeDb.store(TrackConfig::DEFAULT_VOLUME_DB);
@@ -266,14 +300,118 @@ void LoopTrack::clear() {
     reverseState.store(false);
     slipOffset.store(0);
 
-    volumeSmoother.setCurrentAndTargetValue(
+    // Reset smoothers
+    volumeSmoother.setValueUnsmoothed(
             juce::Decibels::decibelsToGain(currentVolumeDb.load()));
+    panSmoother.setValueUnsmoothed(currentPan.load());
 
-    currentState.store(State::Empty);
-    isArmedForRecording.store(false);
     loopLengthSamples = 0;
-    playbackPosition = 0;
-    recordingStartGlobalSample = 0;
+    recordingStartGlobalSample.store(0);
+    currentState.store(State::Empty);
+    hasUndo = false;
+}
+
+void LoopTrack::setLoopLength(int samples) {
+    jassert(samples > 0);
+    jassert(samples <= recordingBuffer.getNumReady());
+
+    loopLengthSamples.store(samples);
+
+    // Trim buffer if needed
+    int currentReady = recordingBuffer.getNumReady();
+    if (currentReady > samples) {
+        recordingBuffer.pop(currentReady - samples);
+    }
+    loadRecordingToPlayer();
+}
+
+void LoopTrack::multiplyLoop() {
+    int currentLength = loopLengthSamples.load();
+    if (currentLength <= 0) return;
+
+    saveUndo();
+
+    int newLength = currentLength * 2;
+    if (newLength <= recordingBuffer.getNumReady()) {
+        setLoopLength(newLength);
+    }
+}
+
+void LoopTrack::divideLoop() {
+    int currentLength = loopLengthSamples.load();
+    if (currentLength < 1024) return;
+
+    saveUndo();
+
+    int newLength = currentLength / 2;
+    setLoopLength(newLength);
+}
+
+void LoopTrack::performUndo() {
+    if (!hasUndo) return;
+
+    // Restore from undo buffer
+    recordingBuffer.reset();
+
+    gin::ScratchBuffer temp(undoBuffer.getNumChannels(), undoLoopLength);
+    if (undoBuffer.peek(temp, 0, undoLoopLength)) {
+        recordingBuffer.write(temp);
+        setLoopLength(undoLoopLength);
+    }
+
+    hasUndo = false;
+}
+
+// === DSP controls ===
+void LoopTrack::setVolumeDb(float newVolumeDb) {
+    currentVolumeDb.store(juce::jlimit(TrackConfig::MIN_VOLUME_DB,
+                                   TrackConfig::MAX_VOLUME_DB,
+                                   newVolumeDb));
+}
+
+void LoopTrack::setPan(float newPan) {
+    currentPan.store(juce::jlimit(TrackConfig::MIN_PAN,
+                              TrackConfig::MAX_PAN,
+                              newPan));
+}
+
+void LoopTrack::setMute (bool shouldMute) { muteState.store(shouldMute); }
+void LoopTrack::setSolo(bool shouldSolo) { soloState.store(shouldSolo); }
+void LoopTrack::setReverse(bool reverse) { reverseState.store(reverse); }
+void LoopTrack::setSlip(int samples) { slipOffset.store(samples); }
+
+
+
+// === Private Helpers ===
+void LoopTrack::loadRecordingToPlayer() {
+    int loopLen = loopLengthSamples.load();
+    if (loopLen <= 0) return;
+
+    int channels = recordingBuffer.getNumChannels();
+
+    // Get temporary buffer from pool
+    gin::ScratchBuffer temp(channels, loopLen);
+
+    // Peek at recording buffer
+    if (recordingBuffer.peek(temp, 0, loopLen)) {
+        // Load into gin::SamplePlayer
+        player.setBuffer(temp, sampleRate);
+    }
+}
+
+void LoopTrack::saveUndo() {
+    int currentLen = loopLengthSamples.load();
+    if (currentLen > 0) {
+        undoBuffer.reset();
+
+        gin::ScratchBuffer temp(recordingBuffer.getNumChannels(),currentLen);
+
+        if (recordingBuffer.peek(temp, 0, currentLen)) {
+            undoBuffer.write(temp);
+            undoLoopLength = currentLen;
+            hasUndo = true;
+        }
+    }
 }
 
 void LoopTrack::applyReverse(juce::AudioBuffer<float> &buffer) {
@@ -302,8 +440,7 @@ void LoopTrack::applySlip(juce::AudioBuffer<float>& buffer) {
     if (offset == 0) return;
 
     // Create temporary copy
-    juce::AudioBuffer<float> temp(buffer.getNumChannels(), numSamples);
-    temp.makeCopyOf(buffer);
+    gin::ScratchBuffer temp(buffer);
 
     // Apply rotation
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
@@ -318,5 +455,15 @@ void LoopTrack::applySlip(juce::AudioBuffer<float>& buffer) {
         std::memcpy(dest + (numSamples - offset),
                     src,
                     static_cast<size_t>(offset) * sizeof(float));
+    }
+}
+
+juce::String LoopTrack::getStateString() const {
+    switch (currentState.load()) {
+        case State::Empty:          return "Empty";
+        case State::Recording:      return "REC";
+        case State::Playing:        return "Play";
+        case State::Stopped:        return "Stop";
+        default:                    return "unknown";
     }
 }

@@ -54,7 +54,7 @@ public:
     }
 
     int getSamplesPerBar(int beatsPerBar = 4) const noexcept {
-        return getSamplesPerBeat() * beatsPerBar;
+        return static_cast<int>(getSamplesPerBeat() * beatsPerBar);
     }
 
 private:
@@ -63,7 +63,7 @@ private:
     double sampleRate = TrackConfig::DEFAULT_SAMPLE_RATE;
 
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyncEngine);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyncEngine)
 };
 
 

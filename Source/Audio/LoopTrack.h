@@ -75,7 +75,7 @@ public:
     // === Getters (for UI and manager) ===
     State getState() const noexcept { return currentState.load(); }
     int getTrackId() const noexcept {return trackId; }
-    int getLoopLengthSamples() const noexcept { loopLengthSamples.load(); }
+    int getLoopLengthSamples() const noexcept { return loopLengthSamples.load(); }
     bool hasLoop() const noexcept { return loopLengthSamples.load() > 0; }
     bool isArmed() const noexcept { return isArmedForRecording.load(); }
     bool isMuted() const noexcept { return muteState.load(); }
@@ -135,7 +135,7 @@ private:
     void loadRecordingToPlayer();
 
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopTrack);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopTrack)
 };
 
 

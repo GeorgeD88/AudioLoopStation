@@ -8,6 +8,9 @@ namespace TrackConfig {
 
     // Sync Engine
     constexpr float DEFAULT_BPM = 120.0f;
+    constexpr float BPM_GLOBAL_MIN = 40.0f;
+    constexpr float BPM_GLOBAL_MAX = 200.0f;
+    constexpr float DEFAULT_BPM_INCR = 0.5f;
 
     // Track Configuration
     constexpr int INVALID_TRACK_ID = -1;
@@ -23,7 +26,7 @@ namespace TrackConfig {
     // DSP Parameters
     constexpr float MIN_VOLUME_DB = -60.0f;
     constexpr float MAX_VOLUME_DB = 6.0f;
-    constexpr float DEFAULT_VOLUME_DB = 0.8f;              // -6dB default
+    constexpr float DEFAULT_VOLUME_DB = 0.8f;           // -6dB default
     constexpr double_t VOLUME_FADE_SECONDS = 0.05f;
 
     constexpr float MIN_PAN = -1.0f;                    // Full left

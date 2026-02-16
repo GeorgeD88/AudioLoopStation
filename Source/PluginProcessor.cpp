@@ -1,6 +1,63 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+juce::AudioProcessorValueTreeState::ParameterLayout
+AudioLoopStationAudioProcessor::createParameterLayout() {
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    // Track parameters
+    for (int i = 0; i < TrackConfig::MAX_TRACKS; i++) {
+        juce::String id = "track_" + juce::String(i);
+
+        // Volume parameter (dB)
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+                id + "_vol",
+                id + " Volume",
+                juce::NormalisableRange<float>(TrackConfig::MIN_VOLUME_DB,
+                                               TrackConfig::MAX_VOLUME_DB, 0.1f),
+                                               TrackConfig::DEFAULT_VOLUME_DB,
+                                               juce::AudioParameterFloatAttributes().withLabel("dB")));
+
+        // Pan parameters
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+                id + "_pan",
+                id + " Pan",
+                juce::NormalisableRange<float>(TrackConfig::MIN_PAN,
+                                               TrackConfig::MAX_PAN, 0.1f),
+                TrackConfig::DEFAULT_PAN,
+                juce::AudioParameterFloatAttributes().withLabel("%")));
+
+        // Mute button
+        layout.add(std::make_unique<juce::AudioParameterBool>(
+                id + "_mute",
+                id + " Mute",
+                false));
+
+        // Solo button
+        layout.add(std::make_unique<juce::AudioParameterBool>(
+                id + "_solo",
+                id + " Mute",
+                false));
+
+        // Record arm button
+        layout.add(std::make_unique<juce::AudioParameterBool>(
+                id + "_arm",
+                id + "Record Arm",
+                false));
+    }
+    // Global tempo/BPM parameter
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+            "tempo",
+            "Tempo",
+            juce::NormalisableRange<float>(TrackConfig::BPM_GLOBAL_MIN,
+                                           TrackConfig::BPM_GLOBAL_MAX,
+                                           TrackConfig::DEFAULT_BPM_INCR),
+            TrackConfig::DEFAULT_BPM,
+            juce::AudioParameterFloatAttributes().withLabel("BPM")));
+
+    return layout;
+}
+
 //==============================================================================
 AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
         : AudioProcessor (BusesProperties()
@@ -10,13 +67,38 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
 #endif
                                   .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
 #endif
-)
-{
+),
+          loopManager(syncEngine),
+          apvts(*this, nullptr, "PARAMETERS", createParameterLayout()) {
     formatManager.registerBasicFormats();
+
+    // Connect parameters to MixerEngine
+    mixerEngine.attachParameters(apvts);
+
+    // Link tempo to SyncEngine
+    apvts.addParameterListener("tempo", this);
 }
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
+    apvts.removeParameterListener("tempo", this);
+}
+
+//==============================================================================
+/**
+ * Handles parameter changes from the UI,
+ * This currently only processes tempo changes.
+ * Other parameters are handled directly by MixerEngine via attachParameters()
+ *
+ * @param parameterID  The ID of the changed parameter
+ * @param newValue     The new parameter value
+ */
+void AudioLoopStationAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
+    if (parameterID == "tempo") {
+        syncEngine.setTempo(newValue);
+    }
+
+    // Handle any other parameter changes that won't go in MixerEngine
 }
 
 //==============================================================================
@@ -87,12 +169,29 @@ void AudioLoopStationAudioProcessor::changeProgramName (int index, const juce::S
 //==============================================================================
 void AudioLoopStationAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    transportSource.prepareToPlay(samplesPerBlock, sampleRate);
+    // Get channel config
+    int numInputChannels = getTotalNumInputChannels();
+
+    // Prepare SyncEngine
+    syncEngine.prepare(sampleRate, samplesPerBlock);
+
+    // Prepare LoopManager
+    loopManager.prepareToPlay(sampleRate, samplesPerBlock, numInputChannels);
+
+    // Prepare MixerEngine
+    mixerEngine.prepare(sampleRate, samplesPerBlock);
+
+    // Set initial tempo
+    float tempo = apvts.getRawParameterValue("tempo")->load();
+    syncEngine.setTempo(tempo);
+
+    // Legacy JUCE transport not needed as everything is handled by Gin's SamplePlayer
 }
 
 void AudioLoopStationAudioProcessor::releaseResources()
 {
-    transportSource.releaseResources();
+    loopManager.releaseResources();
+    mixerEngine.prepare(0, 0);
 }
 
 bool AudioLoopStationAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -128,14 +227,17 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
         buffer.clear (i, 0, buffer.getNumSamples());
 
     // Clear the main buffer first
-    buffer.clear();
+    loopManager.processBlock(buffer, buffer);
 
-    // Let the transport source fill the buffer
-    if (readerSource.get() != nullptr)
-    {
-        juce::AudioSourceChannelInfo info(&buffer, 0, buffer.getNumSamples());
-        transportSource.getNextAudioBlock(info);
-    }
+    // Get track outputs from LoopManager
+    auto trackOutputs = loopManager.getTrackOutputs();
+
+    // Mix outputs
+    mixerEngine.process(trackOutputs, buffer);
+
+    // Update playback state
+    isPlaying_ = (loopManager.isAnyTrackRecording()
+            || !loopManager.isAllTracksEmpty());
 }
 
 //==============================================================================
@@ -152,52 +254,29 @@ juce::AudioProcessorEditor* AudioLoopStationAudioProcessor::createEditor()
 //==============================================================================
 void AudioLoopStationAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::ignoreUnused (destData);
+    auto state = apvts.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void AudioLoopStationAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::ignoreUnused (data, sizeInBytes);
-}
-
-void AudioLoopStationAudioProcessor::loadFile(const juce::File& audioFile)
-{
-    // Stop anything currently playing
-    transportSource.stop();
-    transportSource.setSource(nullptr);
-    readerSource.reset();
-
-    if (audioFile.existsAsFile())
-    {
-        auto* reader = formatManager.createReaderFor(audioFile);
-
-        if (reader != nullptr)
-        {
-            auto newSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-
-            // Set the source with appropriate parameters
-            transportSource.setSource(newSource.get(),
-                                      0,                    // no read-ahead
-                                      nullptr,              // no background thread
-                                      reader->sampleRate);  // sample rate for conversion
-
-            // Keep the source alive
-            readerSource.reset(newSource.release());
-
-            // Enable looping for our loop station
-            readerSource->setLooping(true);
-        }
+    std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
+    if (xml != nullptr) {
+        apvts.replaceState(juce::ValueTree::fromXml(*xml));
     }
 }
 
 void AudioLoopStationAudioProcessor::startPlayback()
 {
-    transportSource.start();
+    loopManager.startAllPlayback();
+    isPlaying_ = true;
 }
 
 void AudioLoopStationAudioProcessor::stopPlayback()
 {
-    transportSource.stop();
+    loopManager.stopAllPlayback();
+    isPlaying_ = false;
 }
 
 //==============================================================================

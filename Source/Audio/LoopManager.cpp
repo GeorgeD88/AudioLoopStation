@@ -59,10 +59,19 @@ void LoopManager::processBlock(const juce::AudioBuffer<float> &input, juce::Audi
 }
 
 std::vector<juce::AudioBuffer<float>*> LoopManager::getTrackOutputs() {
+    std::vector<juce::AudioBuffer<float>*> outputs;
+    outputs.reserve(TrackConfig::MAX_TRACKS);
 
+    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+        outputs.push_back(&trackOutputs[i]);
+    }
+    return outputs;
 }
 
 void LoopManager::updateTrackOutputs(int numChannels, int numSamples) {
+    jassert(numChannels > 0);
+    jassert(numSamples > 0);
+
     trackOutputs.clear();
     for (int i = 0; i < TrackConfig::MAX_TRACKS; i++) {
         trackOutputs.emplace_back(numChannels, numSamples);
@@ -143,17 +152,19 @@ bool LoopManager::isAnyTrackArmed() const {
 
 bool LoopManager::isAllTracksEmpty() const {
     for (const auto& track : tracks) {
-        if (track->isArmed()) {
-            return true;
+        if (track->hasLoop()) {
+            return false;
         }
     }
-    return false;
+    return true;
 }
 
 int LoopManager::getNumActiveTracks() const {
     int count = 0;
     for (const auto& track : tracks) {
-        count++;
+        if (track->hasLoop()) {
+            count++;
+        }
     }
     return count;
 }

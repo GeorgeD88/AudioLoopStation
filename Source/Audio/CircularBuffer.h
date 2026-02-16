@@ -66,7 +66,7 @@ private:
     void readFromBuffer(int startIndex, juce::AudioBuffer<float>& destination,
                         int destStart, int numSamples);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CircularBuffer);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CircularBuffer)
 };
 
 

@@ -120,6 +120,7 @@ target_sources(AudioLoopStation_Tests
         PRIVATE
         Source/Tests/TestRunner.cpp
         Source/Tests/MixerTests.cpp
+        Source/Tests/ParameterThreadSafetyTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
         Source/Utils/TrackConfig.h

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
@@ -8,7 +7,6 @@
 #include "Audio/SyncEngine.h"
 #include "Audio/LoopManager.h"
 #include "Audio/MixerEngine.h"
-#include "Audio/LoopFileHandler.h"
 #include "Utils/TrackConfig.h"
 
 //==============================================================================
@@ -54,46 +52,32 @@ public:
     // === Listener callback ===
     void parameterChanged(const juce::String& parameterID, float newValue) override;
 
-    juce::AudioFormatManager& getFormatManager() { return formatManager; }
-
-    /** Get current output level (0-1) for VU metering. Updated each processBlock. */
-    float getOutputLevel() const { return outputLevel.load(std::memory_order_relaxed); }
-
-    // APVTS access
+    // === Accessors for UI and components ===
+    LoopManager& getLoopManager() { return loopManager; }
+    MixerEngine& getMixerEngine() { return mixerEngine; }
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
 
-    // === Getters for UI ===
-    LoopManager& getLoopManager() { return loopManager; }
-    SyncEngine& getSyncEngine() { return syncEngine; }
-
     // === Transport control methods ===
-    void loadFileToTrack(const juce::File& audioFile, int trackIndex);
     void startPlayback();
     void stopPlayback();
     bool isPlaying() const { return isPlaying_; }
+
 
 private:
     // === Core components ===
     SyncEngine syncEngine;                          // 1. Global timekeeper
     LoopManager loopManager;                        // 2. Manages tracks, uses the SyncEngine
     MixerEngine mixerEngine;                        // 3. Mixes tracks
-    std::unique_ptr<LoopFileHandler> fileHandler;   // 4. File loading
 
-    std::atomic<float> outputLevel{0.0f};
-
-    // APVTS for track parameters
+    // === Parameter management ===
     juce::AudioProcessorValueTreeState apvts;
     juce::AudioFormatManager formatManager;
-
-    // === Audio Playback Logic ==
-    std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
-    juce::AudioTransportSource transportSource;
 
     // === State ===
     std::atomic<bool> isPlaying_ {false};
 
     // === Parameter layout creation ===
-    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationAudioProcessor)

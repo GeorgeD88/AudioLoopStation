@@ -51,6 +51,8 @@ set(SourceFiles
         # UI - Subcomponents
         Source/UI/Components/TransportComponent.cpp
         Source/UI/Components/TransportComponent.h
+        Source/UI/Components/TrackStripComponent.cpp
+        Source/UI/Components/TrackStripComponent.h
         Source/UI/Components/TrackControlPanel.cpp
         Source/UI/Components/TrackControlPanel.h
 
@@ -137,4 +139,5 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_processors
+        juce::juce_dsp
 )

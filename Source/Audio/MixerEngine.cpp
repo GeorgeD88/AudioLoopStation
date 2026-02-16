@@ -20,10 +20,18 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
     sampleRate = sampleRateIn;
     blockSize = samplesPerBlock;
 
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(blockSize);
+    spec.numChannels = 2;
+
     for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         volumeSmoothers[i].reset(sampleRate, 0.01); // ~10ms
         volumeSmoothers[i].setCurrentAndTargetValue(1.0f);
+        panners[i].setRule(juce::dsp::PannerRule::squareRoot3dB);
+        panners[i].prepare(spec);
+        panners[i].setPan(0.0f);
     }
 }
 
@@ -32,12 +40,13 @@ void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
     // hook APVTS params here (value names might change later, these are temporary)
     for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
-        auto idx = juce::String(i);
+        auto idx = juce::String(i + 1);
+        auto prefix = "Track" + idx + "_";
 
-        volParams[i]  = apvts.getRawParameterValue("track_" + idx + "_vol");
-        panParams[i]  = apvts.getRawParameterValue("track_" + idx + "_pan");
-        muteParams[i] = apvts.getRawParameterValue("track_" + idx + "_mute");
-        soloParams[i] = apvts.getRawParameterValue("track_" + idx + "_solo");
+        volParams[i]  = apvts.getRawParameterValue(prefix + "Volume");
+        panParams[i]  = apvts.getRawParameterValue(prefix + "Pan");
+        muteParams[i] = apvts.getRawParameterValue(prefix + "Mute");
+        soloParams[i] = apvts.getRawParameterValue(prefix + "Solo");
 
     }
 
@@ -56,20 +65,19 @@ void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
     // read params per block (audio thread)
     for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
-        float volDb = 0.0f;
+        float volValue = 1.0f;
         float pan = 0.0f;
 
         if (volParams[i] != nullptr)
-            volDb = volParams[i]->load();
+            volValue = volParams[i]->load();
 
         if (panParams[i] != nullptr)
             pan = panParams[i]->load();
 
-        lastVolDb[i] = volDb;
+        lastVolDb[i] = volValue;
         lastPan[i] = pan;
 
-        float gain = juce::Decibels::decibelsToGain(volDb);
-        volumeSmoothers[i].setTargetValue(gain);
+        volumeSmoothers[i].setTargetValue(volValue);
 
         float startGain = volumeSmoothers[i].getCurrentValue();
         volumeSmoothers[i].skip(numSamples);
@@ -80,9 +88,14 @@ void MixerEngine::process(std::vector<juce::AudioBuffer<float>*>& inputTracks,
             auto* track = inputTracks[i];
             for (int ch = 0; ch < track->getNumChannels(); ++ch)
                 track->applyGainRamp(ch, 0, numSamples, startGain, endGain);
+
+            panners[i].setPan(pan);
+            juce::dsp::AudioBlock<float> block(*track);
+            juce::dsp::ProcessContextReplacing<float> ctx(block);
+            panners[i].process(ctx);
         }
 
-        juce::ignoreUnused(volDb, pan);
+        juce::ignoreUnused(volValue, pan);
     }
 
     masterOutput.clear();

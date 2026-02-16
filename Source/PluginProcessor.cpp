@@ -1,60 +1,76 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-juce::AudioProcessorValueTreeState::ParameterLayout
-AudioLoopStationAudioProcessor::createParameterLayout() {
+//==============================================================================
+juce::AudioProcessorValueTreeState::ParameterLayout AudioLoopStationAudioProcessor::createParameterLayout()
+{
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // Track parameters
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; i++) {
-        juce::String id = "track_" + juce::String(i);
+    for (int trackIndex = 0; trackIndex < TrackConfig::MAX_TRACKS; ++trackIndex)
+    {
+        juce::String trackPrefix = "Track" + juce::String(trackIndex + 1) + "_";
 
-        // Volume parameter (dB)
+        // Volume parameter (0.0 to 1.0, default 0.8)
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                id + "_vol",
-                id + " Volume",
-                juce::NormalisableRange<float>(TrackConfig::MIN_VOLUME_DB,
-                                               TrackConfig::MAX_VOLUME_DB, 0.1f),
-                                               TrackConfig::DEFAULT_VOLUME_DB,
-                                               juce::AudioParameterFloatAttributes().withLabel("dB")));
+            juce::ParameterID(trackPrefix + "Volume", 1),
+            trackPrefix + "Volume",
+            juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+            0.8f,
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value * 100.0f, 1) + "%"; },
+            nullptr
+        ));
 
-        // Pan parameters
+        // Pan parameter (-1.0 to 1.0, default 0.0)
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                id + "_pan",
-                id + " Pan",
-                juce::NormalisableRange<float>(TrackConfig::MIN_PAN,
-                                               TrackConfig::MAX_PAN, 0.1f),
-                TrackConfig::DEFAULT_PAN,
-                juce::AudioParameterFloatAttributes().withLabel("%")));
+            juce::ParameterID(trackPrefix + "Pan", 1),
+            trackPrefix + "Pan",
+            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f),
+            0.0f,
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) {
+                if (value < -0.01f) return juce::String(value * 100.0f, 1) + "% L";
+                if (value > 0.01f) return juce::String(value * 100.0f, 1) + "% R";
+                return juce::String("Center");
+            },
+            nullptr
+        ));
 
-        // Mute button
+        // Mute parameter (bool, default false)
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                id + "_mute",
-                id + " Mute",
-                false));
+            juce::ParameterID(trackPrefix + "Mute", 1),
+            trackPrefix + "Mute",
+            false,
+            juce::String(),
+            [](bool value, int) { return value ? "Muted" : "Unmuted"; },
+            nullptr
+        ));
 
-        // Solo button
+        // Solo parameter (bool, default false)
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                id + "_solo",
-                id + " Mute",
-                false));
-
-        // Record arm button
-        layout.add(std::make_unique<juce::AudioParameterBool>(
-                id + "_arm",
-                id + "Record Arm",
-                false));
+            juce::ParameterID(trackPrefix + "Solo", 1),
+            trackPrefix + "Solo",
+            false,
+            juce::String(),
+            [](bool value, int) { return value ? "Soloed" : "Not Soloed"; },
+            nullptr
+        ));
     }
+
     // Global tempo/BPM parameter
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "tempo",
+            juce::ParameterID("Tempo", 1),  // Use ParameterID for consistency
             "Tempo",
             juce::NormalisableRange<float>(TrackConfig::BPM_GLOBAL_MIN,
-                                           TrackConfig::BPM_GLOBAL_MAX,
-                                           TrackConfig::DEFAULT_BPM_INCR),
+                                           TrackConfig::BPM_GLOBAL_MAX, 0.1f),
             TrackConfig::DEFAULT_BPM,
-            juce::AudioParameterFloatAttributes().withLabel("BPM")));
-
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 1) + " BPM"; },
+            nullptr
+    ));
     return layout;
 }
 
@@ -70,18 +86,19 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
 ),
           loopManager(syncEngine),
           apvts(*this, nullptr, "PARAMETERS", createParameterLayout()) {
+
     formatManager.registerBasicFormats();
 
     // Connect parameters to MixerEngine
     mixerEngine.attachParameters(apvts);
 
     // Link tempo to SyncEngine
-    apvts.addParameterListener("tempo", this);
+    apvts.addParameterListener("Tempo", this);
 }
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
-    apvts.removeParameterListener("tempo", this);
+    apvts.removeParameterListener("Tempo", this);
 }
 
 //==============================================================================
@@ -94,7 +111,7 @@ AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
  * @param newValue     The new parameter value
  */
 void AudioLoopStationAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
-    if (parameterID == "tempo") {
+    if (parameterID == "Tempo") {
         syncEngine.setTempo(newValue);
     }
 
@@ -182,7 +199,7 @@ void AudioLoopStationAudioProcessor::prepareToPlay (double sampleRate, int sampl
     mixerEngine.prepare(sampleRate, samplesPerBlock);
 
     // Set initial tempo
-    float tempo = apvts.getRawParameterValue("tempo")->load();
+    float tempo = apvts.getRawParameterValue("Tempo")->load();
     syncEngine.setTempo(tempo);
 
     // Legacy JUCE transport not needed as everything is handled by Gin's SamplePlayer

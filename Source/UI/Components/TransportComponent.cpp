@@ -40,12 +40,20 @@ void TransportComponent::paint (juce::Graphics& g)
 
 void TransportComponent::resized()
 {
-    auto bounds = getLocalBounds().reduced(10);
-    auto buttonWidth = bounds.getWidth() / 4;
-    auto buttonHeight = bounds.getHeight();
+    juce::FlexBox flexBox;
+    flexBox.flexDirection = juce::FlexBox::Direction::row;
+    flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+    flexBox.alignContent = juce::FlexBox::AlignContent::stretch;
+    flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+    flexBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
 
-    recordButton.setBounds(bounds.removeFromLeft(buttonWidth).reduced(2));
-    playButton.setBounds(bounds.removeFromLeft(buttonWidth).reduced(2));
-    stopButton.setBounds(bounds.removeFromLeft(buttonWidth).reduced(2));
-    undoButton.setBounds(bounds.removeFromLeft(buttonWidth).reduced(2));
+    constexpr float margin = 10.0f;
+    constexpr float padding = 2.0f;
+
+    flexBox.items.add(juce::FlexItem(recordButton).withFlex(1.0f).withMargin(padding));
+    flexBox.items.add(juce::FlexItem(playButton).withFlex(1.0f).withMargin(padding));
+    flexBox.items.add(juce::FlexItem(stopButton).withFlex(1.0f).withMargin(padding));
+    flexBox.items.add(juce::FlexItem(undoButton).withFlex(1.0f).withMargin(padding));
+
+    flexBox.performLayout(getLocalBounds().reduced(margin));
 }

@@ -7,6 +7,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 
 #include "../Utils/TrackConfig.h"
 
@@ -30,6 +31,7 @@ private:
     std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> soloParams{};
 
     std::array<juce::LinearSmoothedValue<float>, TrackConfig::MAX_TRACKS> volumeSmoothers;
+    std::array<juce::dsp::Panner<float>, TrackConfig::MAX_TRACKS> panners;
     std::array<float, TrackConfig::MAX_TRACKS> lastVolDb{};
     std::array<float, TrackConfig::MAX_TRACKS> lastPan{};
 

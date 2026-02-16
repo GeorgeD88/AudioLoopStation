@@ -62,7 +62,6 @@ public:
     void stopPlayback();
     bool isPlaying() const { return isPlaying_; }
 
-
 private:
     // === Core components ===
     SyncEngine syncEngine;                          // 1. Global timekeeper
@@ -77,7 +76,7 @@ private:
     std::atomic<bool> isPlaying_ {false};
 
     // === Parameter layout creation ===
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationAudioProcessor)

@@ -38,10 +38,11 @@ void AudioLoopStationEditor::stopButtonClicked()
 
 void AudioLoopStationEditor::loopButtonChanged()
 {
-    if (audioProcessor.getReaderSource() != nullptr)
-    {
-        audioProcessor.getReaderSource()->setLooping(loopingToggle.getToggleState());
-    }
+    // old audio player no longer in use
+    // if (audioProcessor.getReaderSource() != nullptr)
+    // {
+    //     audioProcessor.getReaderSource()->setLooping(loopingToggle.getToggleState());
+    // }
 }
 
 void AudioLoopStationEditor::resized()

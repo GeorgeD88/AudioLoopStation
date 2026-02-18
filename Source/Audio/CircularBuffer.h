@@ -6,6 +6,7 @@
 #include "../Utils/TrackConfig.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_core/juce_core.h"
+#include "gin_dsp/gin_dsp.h"
 
 class CircularBuffer {
 public:
@@ -65,7 +66,7 @@ private:
     void readFromBuffer(int startIndex, juce::AudioBuffer<float>& destination,
                         int destStart, int numSamples);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CircularBuffer);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CircularBuffer)
 };
 
 

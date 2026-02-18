@@ -29,22 +29,21 @@ CPMAddPackage(
 
 # Make sure you include any new source files here
 set(SourceFiles
-        Source/PluginEditor.cpp
+        Source/PluginEditor.cpp                                         # Wrapper for UI
         Source/PluginEditor.h
-        Source/PluginProcessor.cpp
+        Source/PluginProcessor.cpp                                      # Wrapper for our audio section our "AudioLoopStationAudioProcessor"
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
-        Source/Audio/CircularBuffer.h
+        Source/Audio/CircularBuffer.h                                   # Track Storage - like an audio tape
         Source/Audio/CircularBuffer.cpp
-        Source/Audio/AudioEngine.cpp
-        Source/Audio/AudioEngine.h
-        Source/Audio/LoopManager.cpp
+        Source/Audio/LoopManager.cpp                                    # Sync Logic - the window that surrounds the track section
         Source/Audio/LoopManager.h
-        Source/Audio/LoopTrack.cpp
-        Source/Audio/LoopManager.h
-        Source/Audio/MixerEngine.cpp
+        Source/Audio/LoopTrack.cpp                                      # Like a track in a DAW - where recording goes, takes input/DSP, and sends output
+        Source/Audio/LoopTrack.h
+        Source/Audio/MixerEngine.cpp                                    # The mixing console and master section - controls gain and levels
         Source/Audio/MixerEngine.h
+        Source/Audio/SyncEngine.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -92,6 +91,9 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
+# Gin modules
+add_subdirectory(modules/gin/modules)
+
 # JUCE libraries to bring into our project
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
@@ -109,6 +111,12 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
+
+        # Gin modules
+        PRIVATE
+        gin
+        gin_dsp
+        gin_gui
 )
 
 # tiny console test runner (separate from the plugin)

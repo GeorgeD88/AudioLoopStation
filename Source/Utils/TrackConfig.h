@@ -5,9 +5,18 @@
 # pragma once
 
 namespace TrackConfig {
+
+    // Sync Engine
+    constexpr float DEFAULT_BPM = 120.0f;
+    constexpr float BPM_GLOBAL_MIN = 40.0f;
+    constexpr float BPM_GLOBAL_MAX = 200.0f;
+    constexpr float DEFAULT_BPM_INCR = 0.5f;
+
     // Track Configuration
-    constexpr int MAX_TRACKS = 4;                       // MVP: 4 mono/2 stereo
-    constexpr bool STEREO_MODE = false;                 // set to false for 4 mono tracks, true for two stereo tracks
+    constexpr int INVALID_TRACK_ID = -1;
+    constexpr int FIRST_TRACK_ID = 0;
+    constexpr int MAX_TRACKS = 4;                      // MVP: 4 mono/2 stereo
+    constexpr bool STEREO_MODE = true;                 // set to false for 4 mono tracks, true for two stereo tracks
 
     // Audio Engine
     constexpr int DEFAULT_SAMPLE_RATE = 48000;
@@ -17,11 +26,13 @@ namespace TrackConfig {
     // DSP Parameters
     constexpr float MIN_VOLUME_DB = -60.0f;
     constexpr float MAX_VOLUME_DB = 6.0f;
-    constexpr float DEFAULT_VOLUME = 0.8f;              // -6dB default
+    constexpr float DEFAULT_VOLUME_DB = 0.8f;           // -6dB default
+    constexpr double_t VOLUME_FADE_SECONDS = 0.05f;
 
     constexpr float MIN_PAN = -1.0f;                    // Full left
     constexpr float MAX_PAN = 1.0f;                     // Full right
     constexpr float DEFAULT_PAN = 0.0f;                 // Center
+    constexpr double_t PAN_FADE_SECONDS = 0.03f;
 
     constexpr float MIN_PITCH_SEMITONES = -12.0f;
     constexpr float MAX_PITCH_SEMITONES = 12.0f;

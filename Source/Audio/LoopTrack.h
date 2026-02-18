@@ -28,7 +28,6 @@
  */
 class LoopTrack {
 public:
-
     // Recording state machine
     enum class State {
         Empty,                  // No loop recorded
@@ -95,6 +94,7 @@ public:
 private:
     // === Core class components===
     const int trackId;
+    bool playerLoaded = false;
     gin::AudioFifo recordingBuffer;
     gin::AudioFifo undoBuffer;
     gin::SamplePlayer player;
@@ -128,7 +128,7 @@ private:
     int undoLoopLength = 0;
 
     // === Private Helpers ===
-    void applyReverse(juce::AudioBuffer<float>& buffer);  // Helper for reverse
+    static void applyReverse(juce::AudioBuffer<float>& buffer);  // Helper for reverse
     void applySlip(juce::AudioBuffer<float>& buffer);     // Helper for slip
     void applyDspProcessing(juce::AudioBuffer<float>& buffer);
     void saveUndo();

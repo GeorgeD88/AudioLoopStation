@@ -47,10 +47,15 @@ public:
         return tempoBPM.load();
     }
 
-    float getSamplesPerBeat() const noexcept {
+    int getSamplesPerBeat() const noexcept {
         float bpm = tempoBPM.load();
         if (bpm <= 0) return 0;
-        return static_cast<int>((60.0 / bpm) * sampleRate);
+
+        // (60 sec/min divided by bpm) x sampleRate = secs per beat x sampleRate
+        double samplesPerBeat = (60.0 / static_cast<double>(bpm)) * sampleRate;
+
+        // Round to the nearest integer
+        return static_cast<int>(std::round(samplesPerBeat));
     }
 
     int getSamplesPerBar(int beatsPerBar = 4) const noexcept {

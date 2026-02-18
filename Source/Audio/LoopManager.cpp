@@ -38,7 +38,7 @@ void LoopManager::processBlock(const juce::AudioBuffer<float> &input, juce::Audi
     const int numChannels = output.getNumChannels();
 
     // 1. Handle sync (advance the global clock)
-    syncEngine.advance(numChannels);
+    syncEngine.advance(numSamples);
 
     // 2. Update output buffers for this block
     updateTrackOutputs(numChannels, numSamples);

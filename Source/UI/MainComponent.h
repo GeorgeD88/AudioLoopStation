@@ -5,7 +5,6 @@
 #include "Components/TransportComponent.h"
 #include "Components/TrackControlPanel.h"
 #include "Components/WaveformDisplayComponent.h"
-#include "Components/VUMeterComponent.h"
 
 //==============================================================================
 class MainComponent final : public juce::Component
@@ -24,7 +23,6 @@ public:
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
     WaveformDisplayComponent waveformDisplay;
-    VUMeterComponent vuMeter;
     TransportComponent transportComponent;
     TrackControlPanel trackControlPanel;
 

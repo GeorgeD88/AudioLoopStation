@@ -28,10 +28,18 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
     sampleRate = sampleRateIn;
     blockSize = samplesPerBlock;
 
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(blockSize);
+    spec.numChannels = static_cast<juce::uint32>(kStereoChannels);
+
     for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         volumeSmoothers[i].reset(sampleRate, kSmoothingSeconds); // ~10ms
         volumeSmoothers[i].setCurrentAndTargetValue(1.0f);
+        panners[i].setRule(juce::dsp::PannerRule::squareRoot3dB);
+        panners[i].prepare(spec);
+        panners[i].setPan(0.0f);
 
         trackWorkingBuffers[i].setSize(kStereoChannels, blockSize, false, false, true);
         trackWorkingBuffers[i].clear();
@@ -154,17 +162,11 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
             workingBuffer.applyGainRamp(ch, 0, numSamples, startGain, endGain);
         }
 
-        // equal power pan per track before summing into master
-        const float clampedPan = juce::jlimit(-1.0f, 1.0f, pan);
-        const float angle = (clampedPan + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
-        const float leftPanGain = std::cos(angle);
-        const float rightPanGain = std::sin(angle);
-
-        if (workingBuffer.getNumChannels() > 0)
-            workingBuffer.applyGain(0, 0, numSamples, leftPanGain);
-
-        if (workingBuffer.getNumChannels() > 1)
-            workingBuffer.applyGain(1, 0, numSamples, rightPanGain);
+        // JUCE DSP panner handles stereo panning per track
+        panners[i].setPan(juce::jlimit(-1.0f, 1.0f, pan));
+        juce::dsp::AudioBlock<float> block(workingBuffer);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        panners[i].process(context);
 
         const int channelsToSum = juce::jmin(masterOutput.getNumChannels(), workingBuffer.getNumChannels());
         for (int channel = 0; channel < channelsToSum; ++channel)

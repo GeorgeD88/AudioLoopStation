@@ -27,17 +27,6 @@ CPMAddPackage(
         GIT_TAG origin/master
 )
 
-# Tells CMake to download the Gin library automatically
-CPMAddPackage(
-        NAME gin
-        GITHUB_REPOSITORY figbug/Gin
-        GIT_TAG master
-        DOWNLOAD_ONLY YES  # This stops the "duplicate target" error
-)
-
-# Tell CMake where the Gin modules are (Required for the Gin modules below)
-add_subdirectory(${gin_SOURCE_DIR}/modules gin_modules)
-
 # Make sure you include any new source files here
 set(SourceFiles
         Source/PluginEditor.cpp                                         # Wrapper for UI
@@ -46,7 +35,8 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
-        # Track Storage - like an audio tape
+        Source/Audio/CircularBuffer.h                                   # Track Storage - like an audio tape
+        Source/Audio/CircularBuffer.cpp
         Source/Audio/LoopManager.cpp                                    # Sync Logic - the window that surrounds the track section
         Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp                                      # Like a track in a DAW - where recording goes, takes input/DSP, and sends output
@@ -55,6 +45,7 @@ set(SourceFiles
         Source/Audio/MixerEngine.h
         Source/Audio/SyncEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
+        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -68,14 +59,9 @@ set(SourceFiles
         Source/UI/Components/TrackControlPanel.h
         Source/UI/Components/WaveformDisplayComponent.cpp
         Source/UI/Components/WaveformDisplayComponent.h
-        Source/UI/Components/VUMeterComponent.cpp
-        Source/UI/Components/VUMeterComponent.h
-
-        # Tests - cmake target not needed
 
         # Utiities - helpers, configs, and constants in /Utils
-        Source/Utils/TrackConfig.h                                      # Old config file
-        Source/Utils/Config.h                                           # Reconfigured config file
+        Source/Utils/TrackConfig.h
 
 )
 
@@ -108,6 +94,9 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
+
+# Gin modules
+add_subdirectory(modules/gin/modules)
 
 # JUCE libraries to bring into our project
 target_link_libraries(${PROJECT_NAME}
@@ -144,34 +133,10 @@ target_sources(AudioLoopStation_Tests
         PRIVATE
         Source/Tests/TestRunner.cpp
         Source/Tests/MixerTests.cpp
-        Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
-        Source/Tests/CircularBufferTests.cpp
-        Source/Tests/LoopTrackTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
-        Source/Audio/CircularBuffer.cpp
-        Source/Audio/LoopManager.cpp
-        Source/Audio/LoopManager.h
-        Source/Audio/LoopTrack.cpp
-        Source/Audio/LoopTrack.h
-        Source/Audio/SyncEngine.h
         Source/Utils/TrackConfig.h
-)
-
-# Add include paths for Audio headers
-target_include_directories(AudioLoopStation_Tests
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/gin/modules
-)
-
-# Disable GUI for tests
-target_compile_definitions(AudioLoopStation_Tests
-        PRIVATE
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
-        JUCE_DISABLE_NATIVE_FILECHOOSERS=1
 )
 
 target_link_libraries(AudioLoopStation_Tests
@@ -180,8 +145,5 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_processors
-        juce::juce_audio_formats
         juce::juce_dsp
-        gin
-        gin_dsp
 )

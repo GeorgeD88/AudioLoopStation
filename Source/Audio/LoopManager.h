@@ -24,9 +24,9 @@ public:
                       juce::AudioBuffer<float>& output);
 
     // === Track access ===
-    LoopTrack* getTrack(int trackIndex);
-    const LoopTrack* getTrack(int trackIndex) const;
-    int getNumTracks() const noexcept { return TrackConfig::MAX_TRACKS; }
+    LoopTrack* getTrack(size_t trackIndex);
+    const LoopTrack* getTrack(size_t trackIndex) const;
+    size_t getNumTracks() const noexcept { return TrackConfig::MAX_TRACKS; }
 
     // === Global transport controls ===
     void startAllPlayback();

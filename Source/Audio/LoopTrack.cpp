@@ -8,8 +8,8 @@
 #include "LoopTrack.h"
 
 LoopTrack::LoopTrack(int id) : trackId(id),
-recordingBuffer(2,static_cast<int>(TrackConfig::MAX_LOOP_LENGTH_SECONDS * TrackConfig::DEFAULT_SAMPLE_RATE)),
-undoBuffer(2,static_cast<int>(TrackConfig::MAX_LOOP_LENGTH_SECONDS * TrackConfig::DEFAULT_SAMPLE_RATE)) {
+recordingBuffer(2, 1024),
+undoBuffer(2, 1024) {
 
     // Configure Gin's SamplePlayer
     player.setLooping(true);

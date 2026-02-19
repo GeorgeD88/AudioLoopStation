@@ -19,7 +19,8 @@ namespace TrackConfig {
     constexpr bool STEREO_MODE = true;                 // set to false for 4 mono tracks, true for two stereo tracks
 
     // Audio Engine
-    constexpr int DEFAULT_SAMPLE_RATE = 48000;
+    constexpr int DEFAULT_SAMPLE_RATE = 48000;          // compile-time default
+    constexpr int INIT_BUFFER_SIZE_SAMPLES = 1024;
     constexpr int DEFAULT_BUFFER_SIZE = 256;            // for ~5.3ms latency at 48k
     constexpr double MAX_LOOP_LENGTH_SECONDS = 600;     // 10 minutes
 

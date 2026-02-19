@@ -7,8 +7,8 @@
 LoopManager::LoopManager(SyncEngine& se) : syncEngine(se) {
 
      // Create all our tracks
-     for (int i = 0; i < TrackConfig::MAX_TRACKS; i++) {
-         tracks[i] = std::make_unique<LoopTrack>(i);
+     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; i++) {
+         tracks[i] = std::make_unique<LoopTrack>(static_cast<int>(i));
      }
 
      // Pre-allocate vector for track outputs
@@ -44,14 +44,15 @@ void LoopManager::processBlock(const juce::AudioBuffer<float> &input, juce::Audi
     updateTrackOutputs(numChannels, numSamples);
 
     // 3. Process each track into its own output buffer
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; i++) {
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; i++) {
         auto& track = tracks[i];
+        auto& trackBuffer = trackOutputs[i];
 
         // Clear track's output buffer
-        trackOutputs[i].clear();
+        trackBuffer.clear();
 
         // Let the track process - pass syncEngine for beat alignment
-        track->processBlock(input, trackOutputs[i], syncEngine);
+        track->processBlock(input, trackBuffer, syncEngine);
     }
 
     // 4. Clear main output
@@ -62,7 +63,7 @@ std::vector<juce::AudioBuffer<float>*> LoopManager::getTrackOutputs() {
     std::vector<juce::AudioBuffer<float>*> outputs;
     outputs.reserve(TrackConfig::MAX_TRACKS);
 
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
         outputs.push_back(&trackOutputs[i]);
     }
     return outputs;
@@ -73,7 +74,9 @@ void LoopManager::updateTrackOutputs(int numChannels, int numSamples) {
     jassert(numSamples > 0);
 
     trackOutputs.clear();
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; i++) {
+    trackOutputs.reserve(TrackConfig::MAX_TRACKS);
+
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; i++) {
         trackOutputs.emplace_back(numChannels, numSamples);
     }
 }
@@ -85,8 +88,8 @@ void LoopManager::updateTrackOutputs(int numChannels, int numSamples) {
  *  - track->setVolumeDb(0.5f) - Changes parameters
  *  - track->clear() - Modifies track data
  */
-LoopTrack* LoopManager::getTrack(int trackIndex) {
-    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks.size())) {
+LoopTrack* LoopManager::getTrack(size_t trackIndex) {
+    if (trackIndex < tracks.size()) {
         return tracks[trackIndex].get();
     }
     return nullptr;
@@ -99,8 +102,8 @@ LoopTrack* LoopManager::getTrack(int trackIndex) {
  *  - track->getLoopLengthSamples() - Just checking values
  *  - track->getStateString() - Display only
  */
-const LoopTrack* LoopManager::getTrack(int trackIndex) const {
-    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks.size())) {
+const LoopTrack* LoopManager::getTrack(size_t trackIndex) const {
+    if (trackIndex < tracks.size()) {
         return tracks[trackIndex].get();
     }
     return nullptr;

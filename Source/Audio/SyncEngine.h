@@ -16,8 +16,8 @@ public:
     SyncEngine() = default;
     ~SyncEngine() = default;
 
-    void prepare(double sampleRate, int /*samplesPerBlock*/) {
-        this->sampleRate = sampleRate;
+    void prepare(double sr, int /*samplesPerBlock*/) {
+        sampleRate = sr;
         globalSample.store(0);
     }
 
@@ -31,7 +31,7 @@ public:
     }
 
     double getGlobalSeconds() const noexcept {
-        return globalSample.load() / sampleRate;
+        return static_cast<double>(globalSample.load()) / sampleRate;
     }
 
     double getSampleRate() const noexcept {
@@ -65,7 +65,7 @@ public:
 private:
     std::atomic<juce::int64> globalSample { 0 };
     std::atomic<float> tempoBPM {TrackConfig::DEFAULT_BPM};         // 120.0f is the default BPM
-    double sampleRate = TrackConfig::DEFAULT_SAMPLE_RATE;
+    double sampleRate = 0.0;
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyncEngine)

@@ -121,7 +121,7 @@ private:
     std::atomic<int> slipOffset { 0 };
 
     // === Sample rate ===
-    double sampleRate = TrackConfig::DEFAULT_SAMPLE_RATE;
+    double sampleRate = 0.0;
 
     // === Undo ===
     bool hasUndo = false;

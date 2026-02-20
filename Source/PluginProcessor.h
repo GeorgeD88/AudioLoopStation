@@ -54,6 +54,7 @@ public:
 
     juce::AudioTransportSource& getTransportSource() { return transportSource; }
     juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
+    juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
     // APVTS access
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }

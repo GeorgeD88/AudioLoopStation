@@ -3,10 +3,22 @@
 //==============================================================================
 MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
     : audioProcessor(processor),
-     trackControlPanel(processor.getApvts())
+      waveformDisplay(processor.getFormatManager()),
+      trackControlPanel(processor.getApvts())
 {
+    addAndMakeVisible(waveformDisplay);
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);
+}
+
+void MainComponent::setWaveformFile(const juce::File& file)
+{
+    waveformDisplay.setSource(file);
+}
+
+void MainComponent::setWaveformPlaybackPosition(double position)
+{
+    waveformDisplay.setPlaybackPosition(position);
 }
 
 MainComponent::~MainComponent()
@@ -27,6 +39,12 @@ void MainComponent::resized()
     flexBox.alignContent = juce::FlexBox::AlignContent::stretch;
     flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
     flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+
+    // Waveform display at top
+    flexBox.items.add(juce::FlexItem(waveformDisplay)
+                          .withHeight(120.0f)
+                          .withMinHeight(80.0f)
+                          .withMaxHeight(200.0f));
 
     // Track controls take up remaining space (flex: 1)
     flexBox.items.add(juce::FlexItem(trackControlPanel)

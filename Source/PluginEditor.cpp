@@ -5,10 +5,13 @@
 AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
         : AudioProcessorEditor (p), audioProcessor (p), mainComponent(p)
 {
+    openButton.setButtonText("Open...");
+    openButton.onClick = [this] { openButtonClicked(); };
+    addAndMakeVisible(openButton);
+
     addAndMakeVisible(mainComponent);
 
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    startTimerHz(30);
     setSize (1200, 900);
 }
 
@@ -33,6 +36,7 @@ void AudioLoopStationEditor::playButtonClicked()
 void AudioLoopStationEditor::stopButtonClicked()
 {
     audioProcessor.stopPlayback();
+    mainComponent.setWaveformPlaybackPosition(0.0);
     updateTransportButtons();
 }
 
@@ -46,19 +50,41 @@ void AudioLoopStationEditor::loopButtonChanged()
 
 void AudioLoopStationEditor::resized()
 {
-    // Where we will lay out our buttons
-    openButton.setBounds (10, 10, 100, 30);
-    mainComponent.setBounds (getLocalBounds());
+    auto bounds = getLocalBounds();
+    openButton.setBounds(bounds.removeFromTop(36).reduced(8, 4));
+    mainComponent.setBounds(bounds);
 }
 
 void AudioLoopStationEditor::timerCallback()
 {
-    // Logic
+    if (audioProcessor.getReaderSource() != nullptr && audioProcessor.isPlaying())
+    {
+        auto pos = audioProcessor.getCurrentPosition();
+        auto len = audioProcessor.getTransportSource().getLengthInSeconds();
+        if (len > 0.0)
+            mainComponent.setWaveformPlaybackPosition(pos / len);
+    }
 }
 
 void AudioLoopStationEditor::openButtonClicked()
 {
-    // Logic for opening a file will go here
+    juce::Component::SafePointer<AudioLoopStationEditor> safeThis(this);
+    auto chooser = std::make_shared<juce::FileChooser>("Select an audio file...",
+                                                       juce::File(),
+                                                       "*.wav;*.aiff;*.mp3;*.flac;*.ogg");
+    chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+        [safeThis, chooser](const juce::FileChooser& c)
+        {
+            if (safeThis == nullptr)
+                return;
+            auto file = c.getResult();
+            if (file.existsAsFile())
+            {
+                safeThis->audioProcessor.loadFile(file);
+                safeThis->mainComponent.setWaveformFile(file);
+                safeThis->mainComponent.setWaveformPlaybackPosition(0.0);
+            }
+        });
 }
 
 void AudioLoopStationEditor::updateTransportButtons()

@@ -4,7 +4,7 @@
 #include "../PluginProcessor.h"
 #include "Components/TransportComponent.h"
 #include "Components/TrackControlPanel.h"
-#include "../PluginProcessor.h"
+#include "Components/WaveformDisplayComponent.h"
 
 //==============================================================================
 class MainComponent final : public juce::Component
@@ -13,12 +13,16 @@ public:
     explicit MainComponent(AudioLoopStationAudioProcessor& processor);
     ~MainComponent() override;
 
+    void setWaveformFile(const juce::File& file);
+    void setWaveformPlaybackPosition(double position);
+
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
+    WaveformDisplayComponent waveformDisplay;
     TransportComponent transportComponent;
     TrackControlPanel trackControlPanel;
 

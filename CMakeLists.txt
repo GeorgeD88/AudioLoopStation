@@ -55,6 +55,8 @@ set(SourceFiles
         Source/UI/Components/TrackStripComponent.h
         Source/UI/Components/TrackControlPanel.cpp
         Source/UI/Components/TrackControlPanel.h
+        Source/UI/Components/WaveformDisplayComponent.cpp
+        Source/UI/Components/WaveformDisplayComponent.h
 
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h

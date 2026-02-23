@@ -51,6 +51,16 @@ public:
 
     // === Listener callback ===
     void parameterChanged(const juce::String& parameterID, float newValue) override;
+    // Transport control methods
+    void loadFile(const juce::File& audioFile);
+    void startPlayback();
+    void stopPlayback();
+    bool isPlaying() const { return transportSource.isPlaying(); }
+    double getCurrentPosition() const { return transportSource.getCurrentPosition(); }
+
+    juce::AudioTransportSource& getTransportSource() { return transportSource; }
+    juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
+    juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
     // === Accessors for UI and components ===
     LoopManager& getLoopManager() { return loopManager; }

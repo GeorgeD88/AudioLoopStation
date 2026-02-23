@@ -11,9 +11,12 @@ public:
     TrackStripComponent(int trackIndex, juce::AudioProcessorValueTreeState& apvts);
     ~TrackStripComponent() override;
 
+    void paint(juce::Graphics&) override;
     void resized() override;
 
 private:
+    static juce::Colour getTrackColour(int index);
+
     void setupControls();
 
     int trackIndex;

@@ -1,4 +1,17 @@
 #include "TrackStripComponent.h"
+#include <array>
+
+//==============================================================================
+juce::Colour TrackStripComponent::getTrackColour(int index)
+{
+    static const std::array<juce::Colour, 4> colours = {
+        juce::Colour(0xffe53935),  // red
+        juce::Colour(0xff009688),  // teal
+        juce::Colour(0xfffdd835),  // yellow
+        juce::Colour(0xff43a047)   // green
+    };
+    return colours[static_cast<size_t>(index % 4)];
+}
 
 //==============================================================================
 TrackStripComponent::TrackStripComponent(int trackIdx, juce::AudioProcessorValueTreeState& apvtsRef)
@@ -13,9 +26,10 @@ TrackStripComponent::~TrackStripComponent()
 
 void TrackStripComponent::setupControls()
 {
-    // Track label
+    // Track label with track colour
     trackLabel.setText("Track " + juce::String(trackIndex + 1), juce::dontSendNotification);
     trackLabel.setJustificationType(juce::Justification::centred);
+    trackLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(trackLabel);
 
     // Volume slider
@@ -65,6 +79,21 @@ void TrackStripComponent::setupControls()
         apvts, trackPrefix + "Mute", muteButton);
     soloAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         apvts, trackPrefix + "Solo", soloButton);
+}
+
+void TrackStripComponent::paint(juce::Graphics& g)
+{
+    auto colour = getTrackColour(trackIndex);
+    g.fillAll(colour.withAlpha(0.15f));
+
+    // Colored header bar
+    auto headerBounds = getLocalBounds().removeFromTop(20);
+    g.setColour(colour.withAlpha(0.4f));
+    g.fillRect(headerBounds);
+
+    // Colored border
+    g.setColour(colour.withAlpha(0.6f));
+    g.drawRect(getLocalBounds(), 1);
 }
 
 void TrackStripComponent::resized()

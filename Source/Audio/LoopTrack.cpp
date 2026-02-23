@@ -70,6 +70,33 @@ void LoopTrack::prepareToPlay(double sr, int /*samplesPerBlock*/, int numChannel
 }
 
 /**
+ * Sets the audio buffer for this loop track.
+ * - stops any ongoing playback or recording
+ * - clears any existing recording buffer
+ * - handles resampling if needed
+ * - configures the internal player with the new buffer and sample rate
+ *
+ * @param newBuffer             Buffer containing audio data to be used
+ * @param sourceSampleRate      Sample rate of the provided audio buffer
+ */
+void LoopTrack::setAudioBuffer(const juce::AudioSampleBuffer &newBuffer, double sourceSampleRate) {
+    // Clear any existing recording state
+    stop();
+    recordingBuffer.reset();
+
+    // TODO: Handle mismatched sample rates
+
+    // Set audio buffer
+    player.setBuffer(newBuffer, sourceSampleRate);
+    sampleRate = sourceSampleRate;
+
+    playerLoaded = true;
+
+    DBG("Track " + juce::String(trackId) + ": Audio buffer set - " +
+        juce::String(newBuffer.getNumSamples()) + " samples");
+}
+
+/**
  * Main audio processing callback
  * @param input - Live input from audio interface
  * @param output - Buffer to fill with processed track audio
@@ -241,7 +268,8 @@ void LoopTrack::startRecording(juce::int64 globalSample) {
     // Clear previous loop
     recordingBuffer.reset();
     loopLengthSamples.store(0);
-    player.reset();
+    player.clear();
+    playerLoaded = false;
 }
 
 void LoopTrack::stopRecording() {
@@ -266,10 +294,8 @@ void LoopTrack::startPlayback() {
 }
 
 void LoopTrack::stopPlayback() {
-
     isPlaybackActive.store(false);
     player.stop();
-    recordingBuffer.reset();
 
     if (currentState.load() != State::Recording) {
         currentState.store(hasLoop() ? State::Stopped : State::Empty);
@@ -290,6 +316,7 @@ void LoopTrack::clear() {
 
     recordingBuffer.reset();
     undoBuffer.reset();
+    player.clear();
 
     // Reset all states
     currentVolumeDb.store(TrackConfig::DEFAULT_VOLUME_DB);
@@ -380,8 +407,6 @@ void LoopTrack::setSolo(bool shouldSolo) { soloState.store(shouldSolo); }
 void LoopTrack::setReverse(bool reverse) { reverseState.store(reverse); }
 void LoopTrack::setSlip(int samples) { slipOffset.store(samples); }
 
-
-
 // === Private Helpers ===
 void LoopTrack::loadRecordingToPlayer() {
     int loopLen = loopLengthSamples.load();
@@ -396,6 +421,7 @@ void LoopTrack::loadRecordingToPlayer() {
     if (recordingBuffer.peek(temp, 0, loopLen)) {
         // Load into gin::SamplePlayer
         player.setBuffer(temp, sampleRate);
+        playerLoaded = true;
     }
 }
 

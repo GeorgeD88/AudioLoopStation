@@ -44,6 +44,8 @@ set(SourceFiles
         Source/Audio/MixerEngine.cpp                                    # The mixing console and master section - controls gain and levels
         Source/Audio/MixerEngine.h
         Source/Audio/SyncEngine.h
+        Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
+        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -117,6 +119,7 @@ target_link_libraries(${PROJECT_NAME}
         gin
         gin_dsp
         gin_gui
+        gin_plugin
 )
 
 # tiny console test runner (separate from the plugin)

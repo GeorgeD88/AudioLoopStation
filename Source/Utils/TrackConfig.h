@@ -49,4 +49,7 @@ namespace TrackConfig {
 
     // UI Constraints
 
+    // File handler
+    static constexpr int PROJECT_VERSION = 1;
+    static constexpr const char* PROJECT_FILE_EXT = "als";
 }

@@ -71,7 +71,7 @@ public:
     void performUndo();                                         // Undo last op
 
 
-    // === Getters (for UI and manager) ===
+    // === Getters for UI and manager) ===
     State getState() const noexcept { return currentState.load(); }
     int getTrackId() const noexcept {return trackId; }
     int getLoopLengthSamples() const noexcept { return loopLengthSamples.load(); }
@@ -83,6 +83,13 @@ public:
     float getCurrentPan() const noexcept { return currentPan.load(); }
     juce::String getStateString() const;
 
+    // === Audio data access for FileHandler ===
+    void setAudioBuffer(const juce::AudioSampleBuffer &newBuffer, double sourceSampleRate);
+    const juce::AudioSampleBuffer& getAudioBuffer() const { return player.getBuffer(); }
+    double getSourceSampleRate() const { return player.getSourceSampleRate(); }
+    bool hasAudio() const { return player.getBuffer().getNumSamples() > 0; }
+
+
     // === Sync info (for manager to read/write) ===
     void setRecordingStartGlobalSample(juce::int64 sample) {
         recordingStartGlobalSample = sample;
@@ -90,6 +97,7 @@ public:
     juce::int64 getRecordingStartGlobalSample() const noexcept {
         return recordingStartGlobalSample.load();
     }
+
 
 private:
     // === Core class components===

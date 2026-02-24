@@ -224,7 +224,7 @@ public:
             {
                 auto* data = longTrack.getWritePointer(ch);
                 for (int s = 0; s < longTrack.getNumSamples(); ++s)
-                    data[s] = static_cast<float>(s);
+                    data[s] = static_cast<float>(s) * 0.1f;
             }
 
             std::vector<juce::AudioBuffer<float>*> inputs;
@@ -240,10 +240,71 @@ public:
                 mixer.process(inputs, output);
             }
 
-            expectWithinAbsoluteError(output.getSample(0, 0), 1.5f, 0.02f, "Expected sample 6 scaled by headroom.");
-            expectWithinAbsoluteError(output.getSample(0, 1), 1.75f, 0.02f, "Expected sample 7 scaled by headroom.");
-            expectWithinAbsoluteError(output.getSample(0, 2), 2.0f, 0.02f, "Expected sample 8 scaled by headroom.");
-            expectWithinAbsoluteError(output.getSample(0, 3), 2.25f, 0.02f, "Expected sample 9 scaled by headroom.");
+            expectWithinAbsoluteError(output.getSample(0, 0), 0.15f, 0.02f, "Expected sample 6 scaled by headroom.");
+            expectWithinAbsoluteError(output.getSample(0, 1), 0.175f, 0.02f, "Expected sample 7 scaled by headroom.");
+            expectWithinAbsoluteError(output.getSample(0, 2), 0.2f, 0.02f, "Expected sample 8 scaled by headroom.");
+            expectWithinAbsoluteError(output.getSample(0, 3), 0.225f, 0.02f, "Expected sample 9 scaled by headroom.");
+        }
+
+        beginTest("hard clips master output to [-1, 1]");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 64);
+
+            std::vector<juce::AudioBuffer<float>> trackStorage;
+            trackStorage.reserve(TrackConfig::MAX_TRACKS);
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            inputs.reserve(TrackConfig::MAX_TRACKS);
+
+            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            {
+                setTrackParams(apvts, i, 1.0f, 0.0f);
+                trackStorage.emplace_back(2, 64);
+                fillBuffer(trackStorage.back(), 10.0f); // intentionally hot
+                inputs.push_back(&trackStorage.back());
+            }
+
+            juce::AudioBuffer<float> output(2, 64);
+            output.clear();
+            mixer.process(inputs, output);
+
+            float maxValue = -1000.0f;
+            float minValue = 1000.0f;
+            for (int channel = 0; channel < output.getNumChannels(); ++channel)
+            {
+                for (int sample = 0; sample < output.getNumSamples(); ++sample)
+                {
+                    const float value = output.getSample(channel, sample);
+                    maxValue = juce::jmax(maxValue, value);
+                    minValue = juce::jmin(minValue, value);
+                }
+            }
+            expect(maxValue <= 1.0001f, "Positive clipping should cap at +1.0");
+            expect(minValue >= -1.0001f, "Positive clipping should stay above -1.0");
+
+            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+                fillBuffer(trackStorage[i], -10.0f);
+
+            output.clear();
+            mixer.process(inputs, output);
+
+            maxValue = -1000.0f;
+            minValue = 1000.0f;
+            for (int channel = 0; channel < output.getNumChannels(); ++channel)
+            {
+                for (int sample = 0; sample < output.getNumSamples(); ++sample)
+                {
+                    const float value = output.getSample(channel, sample);
+                    maxValue = juce::jmax(maxValue, value);
+                    minValue = juce::jmin(minValue, value);
+                }
+            }
+            expect(minValue >= -1.0001f, "Negative clipping should cap at -1.0");
+            expect(maxValue <= 1.0001f, "Negative clipping should stay below +1.0");
         }
     }
 };

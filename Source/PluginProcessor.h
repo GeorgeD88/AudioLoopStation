@@ -7,6 +7,7 @@
 #include "Audio/SyncEngine.h"
 #include "Audio/LoopManager.h"
 #include "Audio/MixerEngine.h"
+#include "Audio/LoopFileHandler.h"
 #include "Utils/TrackConfig.h"
 
 //==============================================================================
@@ -51,15 +52,7 @@ public:
 
     // === Listener callback ===
     void parameterChanged(const juce::String& parameterID, float newValue) override;
-    // Transport control methods
-    void loadFile(const juce::File& audioFile);
-    void startPlayback();
-    void stopPlayback();
-    bool isPlaying() const { return transportSource.isPlaying(); }
-    double getCurrentPosition() const { return transportSource.getCurrentPosition(); }
 
-    juce::AudioTransportSource& getTransportSource() { return transportSource; }
-    juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
     juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
     // === Accessors for UI and components ===
@@ -68,6 +61,7 @@ public:
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
 
     // === Transport control methods ===
+    void loadFileToTrack(const juce::File& audioFile, int trackIndex);
     void startPlayback();
     void stopPlayback();
     bool isPlaying() const { return isPlaying_; }
@@ -77,6 +71,7 @@ private:
     SyncEngine syncEngine;                          // 1. Global timekeeper
     LoopManager loopManager;                        // 2. Manages tracks, uses the SyncEngine
     MixerEngine mixerEngine;                        // 3. Mixes tracks
+    std::unique_ptr<LoopFileHandler> fileHandler;   // 4. File loading
 
     // === Parameter management ===
     juce::AudioProcessorValueTreeState apvts;

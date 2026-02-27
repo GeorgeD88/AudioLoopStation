@@ -21,6 +21,7 @@ public:
     bool loadAudioFile(const juce::File& file, LoopTrack& targetTrack);
     bool isSupportedAudioFile(const juce::File& file);
     static juce::StringArray getSupportedExtensions();
+    static juce::String getSupportedExtString();
 
     // === Saving and loading projects ===
     bool saveProject(const juce::File& destination,

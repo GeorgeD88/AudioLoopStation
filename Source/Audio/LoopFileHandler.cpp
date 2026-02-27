@@ -118,7 +118,8 @@ bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &
                     static_cast<size_t>(numSamples) * sizeof(float));
     }
 
-    track.setAudioBuffer(buffer, 48000.0);
+    auto sourceSr = static_cast<double>(TrackConfig::DEFAULT_SAMPLE_RATE);
+    track.setAudioBuffer(buffer, sourceSr);
 
     return true;
 }
@@ -134,6 +135,19 @@ bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopMan
 
 juce::StringArray LoopFileHandler::getSupportedExtensions() {
     return {"wav", "aiff", "aif", "flac", "ogg" };
+}
+
+juce::String LoopFileHandler::getSupportedExtString() {
+    auto extensions = getSupportedExtensions();
+    juce::String wildcard;
+
+    for (auto& ext : extensions)
+    {
+        if (wildcard.isNotEmpty())
+            wildcard += ";";
+        wildcard += "*." + ext;
+    }
+    return wildcard;
 }
 
 juce::File LoopFileHandler::getDefaultAudioFolder() {

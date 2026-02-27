@@ -1,6 +1,16 @@
 //
 // Created by Vincewa Tran on 11/7/25.
 //
+// AUDIO LOOP STATION - MASTER CONFIGURATION FILE
+// Centralizes all reused configurable parameters. Change values here.
+// Adjust performance and verify values here.
+//
+// Set values according to project requirements
+// per https://eecs.engineering.oregonstate.edu/capstone/submission/pages/viewSingleProject.php?id=53bwHGZsurEf8EXi
+// - at least 4 mono tracks OR 2 stereo tracks
+// - simultaneous record/playback
+// - at least 3 features from:
+//   time stretch, pitch shift, loop trim, reverse, slip, pan
 
 # pragma once
 

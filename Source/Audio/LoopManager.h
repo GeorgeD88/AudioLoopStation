@@ -20,8 +20,7 @@ public:
     // === Audio thread methods ===
     void prepareToPlay(double sampleRate, int samplesPerBlock, int numChannels);
     void releaseResources();
-    void processBlock(const juce::AudioBuffer<float>& input,
-                      juce::AudioBuffer<float>& output);
+    void processBlock(const juce::AudioBuffer<float>& input);
 
     // === Track access ===
     LoopTrack* getTrack(size_t trackIndex);
@@ -44,8 +43,17 @@ public:
     bool isAllTracksEmpty() const;
     int getNumActiveTracks() const;
 
+    // === Per-track status helpers (for UI) ===
+    LoopTrack::State getTrackState(size_t index) const;
+    bool isTrackArmed(size_t index) const;
+    bool isTrackMuted(size_t index) const;
+    bool isTrackSoloed(size_t index) const;
+    float getTrackVolume(size_t index) const;
+    float getTrackPan(size_t index) const;
+
     // === Get track outputs for MixerEngine ===
     std::vector<juce::AudioBuffer<float>*> getTrackOutputs();
+    std::vector<const juce::AudioBuffer<float>*> getTrackOutputs() const;
 
 private:
     // === Core components ===
@@ -53,10 +61,7 @@ private:
     std::array<std::unique_ptr<LoopTrack>, TrackConfig::MAX_TRACKS> tracks;
 
     // === Per-track output buffers ===
-    std::vector<gin::ScratchBuffer> trackOutputs;
-
-    // === Private helpers
-    void updateTrackOutputs(int numChannels, int numSamples);
+    std::array<std::unique_ptr<gin::ScratchBuffer>, TrackConfig::MAX_TRACKS> trackOutputs;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopManager)
 };

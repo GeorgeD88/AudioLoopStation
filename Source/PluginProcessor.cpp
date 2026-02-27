@@ -85,6 +85,7 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
 #endif
 ),
           loopManager(syncEngine),
+          fileHandler(std::make_unique<LoopFileHandler>()),
           apvts(*this, nullptr, "PARAMETERS", createParameterLayout()) {
 
     formatManager.registerBasicFormats();
@@ -233,9 +234,9 @@ bool AudioLoopStationAudioProcessor::isBusesLayoutSupported (const BusesLayout& 
 void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
-
+    juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
+
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
@@ -243,11 +244,18 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // Clear the main buffer first
-    loopManager.processBlock(buffer, buffer);
+    /** Let LoopManager process everything:
+     * - Tracks record from buffer (input)
+     * - Tracks play to their internal buffers
+     * - LoopManager sums all tracks to buffer (output)
+     */
+    loopManager.processBlock(buffer);
 
     // Get track outputs from LoopManager
     auto trackOutputs = loopManager.getTrackOutputs();
+
+    // Clear buffer
+    buffer.clear();
 
     // Mix outputs
     mixerEngine.process(trackOutputs, buffer);
@@ -281,6 +289,20 @@ void AudioLoopStationAudioProcessor::setStateInformation (const void* data, int 
     std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
     if (xml != nullptr) {
         apvts.replaceState(juce::ValueTree::fromXml(*xml));
+    }
+}
+
+void AudioLoopStationAudioProcessor::loadFileToTrack(const juce::File &audioFile, int trackIndex) {
+    if (!fileHandler) fileHandler = std::make_unique<LoopFileHandler>();
+
+    auto index = static_cast<size_t>(trackIndex);
+
+    if (auto* track = loopManager.getTrack(index))
+    {
+        if (fileHandler->loadAudioFile(audioFile, *track))
+        {
+            DBG("Successfully loaded " + audioFile.getFileName() + " to Track " + juce::String(trackIndex + 1));
+        }
     }
 }
 

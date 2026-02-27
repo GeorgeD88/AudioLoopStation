@@ -5,80 +5,95 @@
 #include "LoopManager.h"
 
 LoopManager::LoopManager(SyncEngine& se) : syncEngine(se) {
-
      // Create all our tracks
      for (size_t i = 0; i < TrackConfig::MAX_TRACKS; i++) {
          tracks[i] = std::make_unique<LoopTrack>(static_cast<int>(i));
      }
 
-     // Pre-allocate vector for track outputs
-     trackOutputs.reserve(TrackConfig::MAX_TRACKS);
+     // Initialize track outputs
+     for (auto& buf : trackOutputs) {
+         buf = nullptr;
+     }
 }
 
 void LoopManager::prepareToPlay(double sampleRate, int samplesPerBlock, int numChannels) {
     // Prepare each track
     for (auto& track : tracks) {
+        if (track)
         track->prepareToPlay(sampleRate, samplesPerBlock, numChannels);
     }
 
-    // Prepare output buffers for the next process block
-    updateTrackOutputs(numChannels, samplesPerBlock);
+    // Pre-allocate all track output buffers ONCE, happens on message thread not the audio thread
+    for (auto& buf : trackOutputs) {
+        buf = std::make_unique<gin::ScratchBuffer>(numChannels, samplesPerBlock);
+        buf->clear();
+    }
+
 }
 
 void LoopManager::releaseResources() {
     for (auto& track : tracks) {
         track->releaseResources();
     }
-    trackOutputs.clear();
+
+    // Release track outputs to return them to the ScratchBuffer pool
+    for (auto& buf : trackOutputs) {
+        buf.reset();
+    }
 }
 
-void LoopManager::processBlock(const juce::AudioBuffer<float> &input, juce::AudioBuffer<float> &output) {
-
-    const int numSamples = output.getNumSamples();
-    const int numChannels = output.getNumChannels();
+void LoopManager::processBlock(const juce::AudioBuffer<float> &input) {
+    const int numSamples = input.getNumSamples();
 
     // 1. Handle sync (advance the global clock)
     syncEngine.advance(numSamples);
 
-    // 2. Update output buffers for this block
-    updateTrackOutputs(numChannels, numSamples);
+    // 2. Clear all track output buffers (reuse, don't allocate)
+    for (auto& buf : trackOutputs) {
+        if (buf) {
+            buf->clear();
+        }
+    }
 
     // 3. Process each track into its own output buffer
     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; i++) {
         auto& track = tracks[i];
         auto& trackBuffer = trackOutputs[i];
 
-        // Clear track's output buffer
-        trackBuffer.clear();
+        if (!track || !trackBuffer) continue;
 
-        // Let the track process - pass syncEngine for beat alignment
-        track->processBlock(input, trackBuffer, syncEngine);
+        // Let the track process - reads from inputs, writes to trackBuffer
+        track->processBlock(input, *trackBuffer, syncEngine);
     }
-
-    // 4. Clear main output
-    output.clear();
 }
 
 std::vector<juce::AudioBuffer<float>*> LoopManager::getTrackOutputs() {
     std::vector<juce::AudioBuffer<float>*> outputs;
     outputs.reserve(TrackConfig::MAX_TRACKS);
 
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
-        outputs.push_back(&trackOutputs[i]);
+    for (auto& buf : trackOutputs) {
+        if (buf) {
+            outputs.push_back(buf.get());
+        } else {
+            outputs.push_back(nullptr);
+        }
     }
     return outputs;
 }
 
-void LoopManager::updateTrackOutputs(int numChannels, int numSamples) {
-    jassert(numChannels > 0);
-    jassert(numSamples > 0);
+std::vector<const juce::AudioBuffer<float>*> LoopManager::getTrackOutputs() const {
+    std::vector<const juce::AudioBuffer<float>*> outputs;
+    outputs.reserve(TrackConfig::MAX_TRACKS);
 
-    trackOutputs.clear();
-    trackOutputs.reserve(TrackConfig::MAX_TRACKS);
-
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; i++) {
-        trackOutputs.emplace_back(numChannels, numSamples);
+    for (auto& buf : trackOutputs) {
+        if (buf) {
+            // Const-correctness: safe because we're providing read-only access
+            outputs.push_back(static_cast<const juce::AudioBuffer<float>*>(buf.get()));
+        } else {
+            outputs.push_back(nullptr);
+        }
     }
+    return outputs;
 }
 
 /**
@@ -170,4 +185,41 @@ int LoopManager::getNumActiveTracks() const {
         }
     }
     return count;
+}
+
+// === Per-track status helpers (for UI) ===
+LoopTrack::State LoopManager::getTrackState(size_t index) const {
+    if (auto* track = getTrack(index))
+        return track->getState();
+    return LoopTrack::State::Empty;
+}
+
+bool LoopManager::isTrackArmed(size_t index) const {
+    if (auto* track = getTrack(index))
+        return track->isArmed();
+    return false;
+}
+
+bool LoopManager::isTrackMuted(size_t index) const {
+    if (auto* track = getTrack(index))
+        return track->isMuted();
+    return false;
+}
+
+bool LoopManager::isTrackSoloed(size_t index) const {
+    if (auto* track = getTrack(index))
+        return track->isSoloed();
+    return false;
+}
+
+float LoopManager::getTrackVolume(size_t index) const {
+    if (auto* track = getTrack(index))
+        return track->getCurrentVolumeDb();
+    return 0.0f;
+}
+
+float LoopManager::getTrackPan(size_t index) const {
+    if (auto* track = getTrack(index))
+        return track->getCurrentPan();
+    return 0.0f;
 }

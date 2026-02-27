@@ -1,5 +1,4 @@
-#ifndef AUDIOLOOPSTATION_MIXERENGINE_H
-#define AUDIOLOOPSTATION_MIXERENGINE_H
+#pragma once
 
 #include <array>
 #include <atomic>
@@ -23,8 +22,8 @@ public:
     void setGlobalSampleCounter(std::atomic<std::int64_t>* counter) noexcept;
     void process(const std::vector<juce::AudioBuffer<float>*>& inputTracks,
                  juce::AudioBuffer<float>& masterOutput);
-    float getLastVolDb(int track) const;
-    float getLastPan(int track) const;
+    float getLastVolDb(size_t track) const;
+    float getLastPan(size_t track) const;
 
 private:
     // APVTS parameter pointers (safe for audio-thread reads via atomic load).
@@ -49,11 +48,12 @@ private:
     // Optional shared clock from SyncEngine/AudioProcessor.
     std::atomic<std::int64_t>* globalSampleCounter = nullptr;
 
-    void copyTrackIntoWorkingBuffer(int trackIndex,
+    void copyTrackIntoWorkingBuffer(size_t trackIndex,
                                     const juce::AudioBuffer<float>* sourceTrack,
                                     int numSamples,
                                     std::int64_t blockStartSample);
     bool isAnySoloActive() const;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerEngine)
 };
 
-#endif //AUDIOLOOPSTATION_MIXERENGINE_H

@@ -15,7 +15,6 @@
 // Project includes
 #include "SyncEngine.h"
 #include "../Utils/TrackConfig.h"
-#include "CircularBuffer.h"
 
 /**
  * Represents a single loop track with recording, playback, and DSP.

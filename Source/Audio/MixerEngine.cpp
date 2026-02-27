@@ -4,6 +4,8 @@ namespace
 {
 constexpr int kStereoChannels = 2;
 constexpr double kSmoothingSeconds = 0.01;
+constexpr float kClipMin = -1.0f;
+constexpr float kClipMax = 1.0f;
 }
 
 MixerEngine::MixerEngine()
@@ -175,6 +177,16 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
 
     // keep consistent headroom when multiple full-scale tracks are active
     masterOutput.applyGain(masterHeadroomScale);
+
+    // simple safety limiter: hard clip at 0 dBFS
+    for (int channel = 0; channel < masterOutput.getNumChannels(); ++channel)
+    {
+        auto* data = masterOutput.getWritePointer(channel);
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            data[sample] = juce::jlimit(kClipMin, kClipMax, data[sample]);
+        }
+    }
 }
 
 float MixerEngine::getLastVolDb(size_t track) const

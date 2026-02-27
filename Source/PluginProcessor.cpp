@@ -59,6 +59,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioLoopStationAudioProcess
         ));
     }
 
+    // Global tempo/BPM parameter
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Tempo", 1),  // Use ParameterID for consistency
+            "Tempo",
+            juce::NormalisableRange<float>(TrackConfig::BPM_GLOBAL_MIN,
+                                           TrackConfig::BPM_GLOBAL_MAX, 0.1f),
+            TrackConfig::DEFAULT_BPM,
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 1) + " BPM"; },
+            nullptr
+    ));
     return layout;
 }
 
@@ -72,13 +84,39 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
                                   .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
 #endif
 ),
-        apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
-{
+          loopManager(syncEngine),
+          fileHandler(std::make_unique<LoopFileHandler>()),
+          apvts(*this, nullptr, "PARAMETERS", createParameterLayout()) {
+
     formatManager.registerBasicFormats();
+
+    // Connect parameters to MixerEngine
+    mixerEngine.attachParameters(apvts);
+
+    // Link tempo to SyncEngine
+    apvts.addParameterListener("Tempo", this);
 }
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
+    apvts.removeParameterListener("Tempo", this);
+}
+
+//==============================================================================
+/**
+ * Handles parameter changes from the UI,
+ * This currently only processes tempo changes.
+ * Other parameters are handled directly by MixerEngine via attachParameters()
+ *
+ * @param parameterID  The ID of the changed parameter
+ * @param newValue     The new parameter value
+ */
+void AudioLoopStationAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
+    if (parameterID == "Tempo") {
+        syncEngine.setTempo(newValue);
+    }
+
+    // Handle any other parameter changes that won't go in MixerEngine
 }
 
 //==============================================================================
@@ -149,12 +187,29 @@ void AudioLoopStationAudioProcessor::changeProgramName (int index, const juce::S
 //==============================================================================
 void AudioLoopStationAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    transportSource.prepareToPlay(samplesPerBlock, sampleRate);
+    // Get channel config
+    int numInputChannels = getTotalNumInputChannels();
+
+    // Prepare SyncEngine
+    syncEngine.prepare(sampleRate, samplesPerBlock);
+
+    // Prepare LoopManager
+    loopManager.prepareToPlay(sampleRate, samplesPerBlock, numInputChannels);
+
+    // Prepare MixerEngine
+    mixerEngine.prepare(sampleRate, samplesPerBlock);
+
+    // Set initial tempo
+    float tempo = apvts.getRawParameterValue("Tempo")->load();
+    syncEngine.setTempo(tempo);
+
+    // Legacy JUCE transport not needed as everything is handled by Gin's SamplePlayer
 }
 
 void AudioLoopStationAudioProcessor::releaseResources()
 {
-    transportSource.releaseResources();
+    loopManager.releaseResources();
+    mixerEngine.prepare(0, 0);
 }
 
 bool AudioLoopStationAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -179,9 +234,9 @@ bool AudioLoopStationAudioProcessor::isBusesLayoutSupported (const BusesLayout& 
 void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
-
+    juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
+
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
@@ -189,15 +244,25 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // Clear the main buffer first
+    /** Let LoopManager process everything:
+     * - Tracks record from buffer (input)
+     * - Tracks play to their internal buffers
+     * - LoopManager sums all tracks to buffer (output)
+     */
+    loopManager.processBlock(buffer);
+
+    // Get track outputs from LoopManager
+    auto trackOutputs = loopManager.getTrackOutputs();
+
+    // Clear buffer
     buffer.clear();
 
-    // Let the transport source fill the buffer
-    if (readerSource.get() != nullptr)
-    {
-        juce::AudioSourceChannelInfo info(&buffer, 0, buffer.getNumSamples());
-        transportSource.getNextAudioBlock(info);
-    }
+    // Mix outputs
+    mixerEngine.process(trackOutputs, buffer);
+
+    // Update playback state
+    isPlaying_ = (loopManager.isAnyTrackRecording()
+            || !loopManager.isAllTracksEmpty());
 }
 
 //==============================================================================
@@ -221,51 +286,36 @@ void AudioLoopStationAudioProcessor::getStateInformation (juce::MemoryBlock& des
 
 void AudioLoopStationAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-
-    if (xmlState.get() != nullptr)
-        if (xmlState->hasTagName(apvts.state.getType()))
-            apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+    std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
+    if (xml != nullptr) {
+        apvts.replaceState(juce::ValueTree::fromXml(*xml));
+    }
 }
 
-void AudioLoopStationAudioProcessor::loadFile(const juce::File& audioFile)
-{
-    // Stop anything currently playing
-    transportSource.stop();
-    transportSource.setSource(nullptr);
-    readerSource.reset();
+void AudioLoopStationAudioProcessor::loadFileToTrack(const juce::File &audioFile, int trackIndex) {
+    if (!fileHandler) fileHandler = std::make_unique<LoopFileHandler>();
 
-    if (audioFile.existsAsFile())
+    auto index = static_cast<size_t>(trackIndex);
+
+    if (auto* track = loopManager.getTrack(index))
     {
-        auto* reader = formatManager.createReaderFor(audioFile);
-
-        if (reader != nullptr)
+        if (fileHandler->loadAudioFile(audioFile, *track))
         {
-            auto newSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-
-            // Set the source with appropriate parameters
-            transportSource.setSource(newSource.get(),
-                                      0,                    // no read-ahead
-                                      nullptr,              // no background thread
-                                      reader->sampleRate);  // sample rate for conversion
-
-            // Keep the source alive
-            readerSource.reset(newSource.release());
-
-            // Enable looping for our loop station
-            readerSource->setLooping(true);
+            DBG("Successfully loaded " + audioFile.getFileName() + " to Track " + juce::String(trackIndex + 1));
         }
     }
 }
 
 void AudioLoopStationAudioProcessor::startPlayback()
 {
-    transportSource.start();
+    loopManager.startAllPlayback();
+    isPlaying_ = true;
 }
 
 void AudioLoopStationAudioProcessor::stopPlayback()
 {
-    transportSource.stop();
+    loopManager.stopAllPlayback();
+    isPlaying_ = false;
 }
 
 //==============================================================================

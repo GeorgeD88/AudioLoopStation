@@ -1,7 +1,5 @@
 #include "MixerEngine.h"
 
-#include <cmath>
-
 namespace
 {
 constexpr int kStereoChannels = 2;
@@ -13,7 +11,7 @@ constexpr float kClipMax = 1.0f;
 MixerEngine::MixerEngine()
 {
     // starting with safe defaults
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         volParams[i] = nullptr;
         panParams[i] = nullptr;
@@ -30,12 +28,12 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
     sampleRate = sampleRateIn;
     blockSize = samplesPerBlock;
 
-    juce::dsp::ProcessSpec spec;
+    juce::dsp::ProcessSpec spec{};
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(blockSize);
     spec.numChannels = static_cast<juce::uint32>(kStereoChannels);
 
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         volumeSmoothers[i].reset(sampleRate, kSmoothingSeconds); // ~10ms
         volumeSmoothers[i].setCurrentAndTargetValue(1.0f);
@@ -51,7 +49,7 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
 void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
 {
     // hook APVTS params here (value names might change later, these are temporary)
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         auto idx = juce::String(i + 1);
         auto prefix = "Track" + idx + "_";
@@ -71,7 +69,7 @@ void MixerEngine::setGlobalSampleCounter(std::atomic<std::int64_t>* counter) noe
     globalSampleCounter = counter;
 }
 
-void MixerEngine::copyTrackIntoWorkingBuffer(int trackIndex,
+void MixerEngine::copyTrackIntoWorkingBuffer(size_t trackIndex,
                                              const juce::AudioBuffer<float>* sourceTrack,
                                              int numSamples,
                                              std::int64_t blockStartSample)
@@ -134,7 +132,7 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
     masterOutput.clear();
 
     // read params per block (audio thread), process each track, then sum into master
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         float volValue = 1.0f;
         float pan = 0.0f;
@@ -149,7 +147,7 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
         lastPan[i] = pan;
 
         const juce::AudioBuffer<float>* sourceTrack =
-            i < static_cast<int>(inputTracks.size()) ? inputTracks[i] : nullptr;
+            i < inputTracks.size() ? inputTracks[i] : nullptr;
         copyTrackIntoWorkingBuffer(i, sourceTrack, numSamples, blockStartSample);
 
         // Per-track gain smoothing avoids zipper noise from rapid UI changes
@@ -191,16 +189,16 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
     }
 }
 
-float MixerEngine::getLastVolDb(int track) const
+float MixerEngine::getLastVolDb(size_t track) const
 {
-    if (track < 0 || track >= TrackConfig::MAX_TRACKS)
+    if (track >= TrackConfig::MAX_TRACKS)
         return 0.0f;
     return lastVolDb[track];
 }
 
-float MixerEngine::getLastPan(int track) const
+float MixerEngine::getLastPan(size_t track) const
 {
-    if (track < 0 || track >= TrackConfig::MAX_TRACKS)
+    if (track >= TrackConfig::MAX_TRACKS)
         return 0.0f;
     return lastPan[track];
 }
@@ -209,7 +207,7 @@ bool MixerEngine::isAnySoloActive() const
 {
     
     // helper for mute/solo logic later
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         if (soloParams[i] != nullptr && soloParams[i]->load() > 0.5f)
             return true;

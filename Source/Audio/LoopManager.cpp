@@ -200,6 +200,7 @@ bool LoopManager::isTrackArmed(size_t index) const {
     return false;
 }
 
+/** TODO: Ensure migration to MixerEngine or delete what is already immplemented there
 bool LoopManager::isTrackMuted(size_t index) const {
     if (auto* track = getTrack(index))
         return track->isMuted();
@@ -223,3 +224,4 @@ float LoopManager::getTrackPan(size_t index) const {
         return track->getCurrentPan();
     return 0.0f;
 }
+*/

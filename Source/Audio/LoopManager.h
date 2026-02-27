@@ -46,10 +46,13 @@ public:
     // === Per-track status helpers (for UI) ===
     LoopTrack::State getTrackState(size_t index) const;
     bool isTrackArmed(size_t index) const;
+
+    /** TODO: Verify in MixerEngine or move
     bool isTrackMuted(size_t index) const;
     bool isTrackSoloed(size_t index) const;
     float getTrackVolume(size_t index) const;
     float getTrackPan(size_t index) const;
+     */
 
     // === Get track outputs for MixerEngine ===
     std::vector<juce::AudioBuffer<float>*> getTrackOutputs();

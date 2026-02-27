@@ -138,11 +138,11 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input,
         }
     }
 
-    // === Playback ===
-    bool shouldPlay = (state == State::Playing || state == State::Recording)
-            && hasLoop()
-            && !muteState.load()
-            && !soloState.load();
+    /** === Playback ===
+     * Should only check if this track has a loop and is in playing state
+     * mute/solo logic is handled by the mixerengine
+     */
+    bool shouldPlay = (state == State::Playing) && hasLoop();
 
     if (shouldPlay) {
         // If it's the first time hitting play, load the buffer into Gin's SamplePlayer

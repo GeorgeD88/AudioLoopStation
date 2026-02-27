@@ -3,6 +3,11 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
+#include "gin/gin.h"
+#include "Audio/SyncEngine.h"
+#include "Audio/LoopManager.h"
+#include "Audio/MixerEngine.h"
+#include "Audio/LoopFileHandler.h"
 #include "Utils/TrackConfig.h"
 
 //==============================================================================
@@ -51,6 +56,8 @@ public:
     void stopPlayback();
     bool isPlaying() const { return transportSource.isPlaying(); }
     double getCurrentPosition() const { return transportSource.getCurrentPosition(); }
+    // === Listener callback ===
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
 
     juce::AudioTransportSource& getTransportSource() { return transportSource; }
     juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
@@ -63,6 +70,14 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
 private:
+    // === Core components ===
+    SyncEngine syncEngine;                          // 1. Global timekeeper
+    LoopManager loopManager;                        // 2. Manages tracks, uses the SyncEngine
+    MixerEngine mixerEngine;                        // 3. Mixes tracks
+    std::unique_ptr<LoopFileHandler> fileHandler;   // 4. File loading
+
+    // === Parameter management ===
+    juce::AudioProcessorValueTreeState apvts;
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioTransportSource transportSource;

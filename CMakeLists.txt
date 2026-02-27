@@ -35,8 +35,7 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
-        Source/Audio/CircularBuffer.h                                   # Track Storage - like an audio tape
-        Source/Audio/CircularBuffer.cpp
+        # Track Storage - like an audio tape
         Source/Audio/LoopManager.cpp                                    # Sync Logic - the window that surrounds the track section
         Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp                                      # Like a track in a DAW - where recording goes, takes input/DSP, and sends output
@@ -60,8 +59,11 @@ set(SourceFiles
         Source/UI/Components/WaveformDisplayComponent.cpp
         Source/UI/Components/WaveformDisplayComponent.h
 
+        # Tests - cmake target not needed
+
         # Utiities - helpers, configs, and constants in /Utils
-        Source/Utils/TrackConfig.h
+        Source/Utils/TrackConfig.h                                      # Old config file
+        Source/Utils/Config.h                                           # Reconfigured config file
 
 )
 

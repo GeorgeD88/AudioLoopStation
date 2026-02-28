@@ -47,7 +47,8 @@ void TransportComponent::resized()
     flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
     flexBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
 
-    constexpr float margin = 10.0f;
+    // Changed these from float (10.0f) to int (10)
+    constexpr int margin = 10;
     constexpr float padding = 2.0f;
 
     flexBox.items.add(juce::FlexItem(recordButton).withFlex(1.0f).withMargin(padding));
@@ -55,5 +56,6 @@ void TransportComponent::resized()
     flexBox.items.add(juce::FlexItem(stopButton).withFlex(1.0f).withMargin(padding));
     flexBox.items.add(juce::FlexItem(undoButton).withFlex(1.0f).withMargin(padding));
 
-    flexBox.performLayout(getLocalBounds().reduced(margin));
+    // By making 'margin' an int, getLocalBounds().reduced(margin) stays an integer calculation.
+    flexBox.performLayout(getLocalBounds().reduced(margin).toFloat());
 }

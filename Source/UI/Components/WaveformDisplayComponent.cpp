@@ -6,10 +6,12 @@ WaveformDisplayComponent::WaveformDisplayComponent(juce::AudioFormatManager& fmt
       thumbnail(512, formatManager, thumbnailCache)
 {
     thumbnail.addChangeListener(this);
+    startTimerHz(playheadAnimationHz);
 }
 
 WaveformDisplayComponent::~WaveformDisplayComponent()
 {
+    stopTimer();
     thumbnail.removeChangeListener(this);
 }
 
@@ -23,16 +25,28 @@ void WaveformDisplayComponent::setSource(const juce::File& audioFile)
     {
         thumbnail.clear();
     }
+    targetPlaybackPosition = -1.0;
+    displayedPlaybackPosition = -1.0;
     repaint();
 }
 
 void WaveformDisplayComponent::setPlaybackPosition(double position)
 {
-    if (std::abs(playbackPosition - position) > 0.001)
-    {
-        playbackPosition = position;
-        repaint();
-    }
+    targetPlaybackPosition = juce::jlimit(0.0, 1.0, position);
+}
+
+void WaveformDisplayComponent::timerCallback()
+{
+    if (targetPlaybackPosition < 0.0)
+        return;
+    if (displayedPlaybackPosition < 0.0)
+        displayedPlaybackPosition = targetPlaybackPosition;
+    else
+        displayedPlaybackPosition += (targetPlaybackPosition - displayedPlaybackPosition) * playheadLerpFactor;
+
+    if (std::abs(displayedPlaybackPosition - targetPlaybackPosition) < 0.0001)
+        displayedPlaybackPosition = targetPlaybackPosition;
+    repaint();
 }
 
 void WaveformDisplayComponent::paint(juce::Graphics& g)
@@ -46,11 +60,16 @@ void WaveformDisplayComponent::paint(juce::Graphics& g)
         g.setColour(juce::Colours::white.withAlpha(0.3f));
         thumbnail.drawChannels(g, bounds, 0.0, thumbnail.getTotalLength(), 1.0f);
 
-        // Draw playhead if position is set
-        if (playbackPosition >= 0.0 && playbackPosition <= 1.0)
+        // Draw animated playhead with subtle glow
+        if (displayedPlaybackPosition >= 0.0 && displayedPlaybackPosition <= 1.0)
         {
-            auto playheadX = static_cast<float>(bounds.getX() + bounds.getWidth() * playbackPosition);
-            g.setColour(juce::Colours::red.withAlpha(0.8f));
+            auto playheadX = static_cast<float>(bounds.getX() + bounds.getWidth() * displayedPlaybackPosition);
+            // Soft glow behind
+            g.setColour(juce::Colours::red.withAlpha(0.25f));
+            g.drawLine(playheadX, static_cast<float>(bounds.getY()),
+                       playheadX, static_cast<float>(bounds.getBottom()), 6.0f);
+            // Bright center line
+            g.setColour(juce::Colours::red.withAlpha(0.95f));
             g.drawLine(playheadX, static_cast<float>(bounds.getY()),
                        playheadX, static_cast<float>(bounds.getBottom()), 2.0f);
         }

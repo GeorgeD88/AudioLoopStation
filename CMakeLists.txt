@@ -58,6 +58,8 @@ set(SourceFiles
         Source/UI/Components/TrackControlPanel.h
         Source/UI/Components/WaveformDisplayComponent.cpp
         Source/UI/Components/WaveformDisplayComponent.h
+        Source/UI/Components/VUMeterComponent.cpp
+        Source/UI/Components/VUMeterComponent.h
 
         # Tests - cmake target not needed
 

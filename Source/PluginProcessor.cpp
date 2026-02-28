@@ -198,6 +198,16 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
         juce::AudioSourceChannelInfo info(&buffer, 0, buffer.getNumSamples());
         transportSource.getNextAudioBlock(info);
     }
+
+    // Update level for VU metering (peak per block)
+    float peak = 0.0f;
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* data = buffer.getReadPointer(ch);
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+            peak = juce::jmax(peak, std::abs(data[i]));
+    }
+    outputLevel.store(peak, std::memory_order_relaxed);
 }
 
 //==============================================================================

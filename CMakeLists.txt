@@ -58,6 +58,8 @@ set(SourceFiles
         Source/UI/Components/TrackControlPanel.h
         Source/UI/Components/WaveformDisplayComponent.cpp
         Source/UI/Components/WaveformDisplayComponent.h
+        Source/UI/Components/VUMeterComponent.cpp
+        Source/UI/Components/VUMeterComponent.h
 
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h

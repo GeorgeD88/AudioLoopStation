@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
@@ -56,6 +57,9 @@ public:
     juce::AudioFormatReaderSource* getReaderSource() { return readerSource.get(); }
     juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
+    /** Get current output level (0-1) for VU metering. Updated each processBlock. */
+    float getOutputLevel() const { return outputLevel.load(std::memory_order_relaxed); }
+
     // APVTS access
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
 
@@ -66,6 +70,8 @@ private:
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioTransportSource transportSource;
+
+    std::atomic<float> outputLevel{0.0f};
 
     // APVTS for track parameters
     juce::AudioProcessorValueTreeState apvts;

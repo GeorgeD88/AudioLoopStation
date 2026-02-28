@@ -98,6 +98,13 @@ void TrackStripComponent::paint(juce::Graphics& g)
 
 void TrackStripComponent::resized()
 {
+    auto bounds = getLocalBounds();
+
+    // 1. Manually position the label to cover the top 20 pixels.
+    // This matches the 'headerBounds' I created in paint().
+    trackLabel.setBounds(bounds.removeFromTop(20));
+
+    // 2. Setup the FlexBox for the rest of the controls.
     juce::FlexBox flexBox;
     flexBox.flexDirection = juce::FlexBox::Direction::column;
     flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
@@ -107,10 +114,10 @@ void TrackStripComponent::resized()
 
     constexpr float margin = 2.0f;
 
-    flexBox.items.add(juce::FlexItem(trackLabel).withHeight(20.0f).withMargin(margin));
-
+    // volumeSlider
     flexBox.items.add(juce::FlexItem(volumeSlider).withFlex(1.0f).withMinHeight(60.0f).withMargin(margin));
 
+    // panSlider
     flexBox.items.add(juce::FlexItem(panSlider).withHeight(30.0f).withMargin(margin));
 
     // Button row 1: ARM and Mute
@@ -118,7 +125,6 @@ void TrackStripComponent::resized()
     buttonRow1.flexDirection = juce::FlexBox::Direction::row;
     buttonRow1.items.add(juce::FlexItem(recordArmButton).withFlex(1.0f).withMargin(1.0f));
     buttonRow1.items.add(juce::FlexItem(muteButton).withFlex(1.0f).withMargin(1.0f));
-
     flexBox.items.add(juce::FlexItem(buttonRow1).withHeight(22.0f));
 
     // Button row 2: Solo and Clear
@@ -126,8 +132,8 @@ void TrackStripComponent::resized()
     buttonRow2.flexDirection = juce::FlexBox::Direction::row;
     buttonRow2.items.add(juce::FlexItem(soloButton).withFlex(1.0f).withMargin(1.0f));
     buttonRow2.items.add(juce::FlexItem(clearButton).withFlex(1.0f).withMargin(1.0f));
-
     flexBox.items.add(juce::FlexItem(buttonRow2).withHeight(22.0f));
 
-    flexBox.performLayout(getLocalBounds().reduced(5));
+    // 3. Perform layout on the remaining bounds (already reduced by removeFromTop).
+    flexBox.performLayout(bounds.reduced(5));
 }

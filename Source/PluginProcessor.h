@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
@@ -55,9 +56,10 @@ public:
 
     juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
-    // === Accessors for UI and components ===
-    LoopManager& getLoopManager() { return loopManager; }
-    MixerEngine& getMixerEngine() { return mixerEngine; }
+    /** Get current output level (0-1) for VU metering. Updated each processBlock. */
+    float getOutputLevel() const { return outputLevel.load(std::memory_order_relaxed); }
+
+    // APVTS access
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
 
     // === Transport control methods ===
@@ -73,7 +75,9 @@ private:
     MixerEngine mixerEngine;                        // 3. Mixes tracks
     std::unique_ptr<LoopFileHandler> fileHandler;   // 4. File loading
 
-    // === Parameter management ===
+    std::atomic<float> outputLevel{0.0f};
+
+    // APVTS for track parameters
     juce::AudioProcessorValueTreeState apvts;
     juce::AudioFormatManager formatManager;
 

@@ -11,19 +11,22 @@
 
 #include "../Utils/TrackConfig.h"
 
-class MixerEngine {
+class MixerEngine : private juce::AudioProcessorValueTreeState::Listener {
 public:
     static constexpr float kDefaultHeadroomScale = 0.25f;
 
     MixerEngine();
+    ~MixerEngine() override;
 
     void prepare(double sampleRate, int samplesPerBlock);
     void attachParameters(juce::AudioProcessorValueTreeState& apvts);
+    void detachParameters();
     void setGlobalSampleCounter(std::atomic<std::int64_t>* counter) noexcept;
     void process(const std::vector<juce::AudioBuffer<float>*>& inputTracks,
                  juce::AudioBuffer<float>& masterOutput);
     float getLastVolDb(size_t track) const;
     float getLastPan(size_t track) const;
+    bool getIsAnyTrackSoloed() const noexcept;
 
 private:
     // APVTS parameter pointers (safe for audio-thread reads via atomic load).
@@ -45,14 +48,18 @@ private:
     double sampleRate = 0.0;
     int blockSize = 0;
     float masterHeadroomScale = kDefaultHeadroomScale;
+    std::atomic<bool> isAnyTrackSoloed{false};
 
     // Optional shared clock from SyncEngine/AudioProcessor.
     std::atomic<std::int64_t>* globalSampleCounter = nullptr;
+    juce::AudioProcessorValueTreeState* attachedApvts = nullptr;
 
     void copyTrackIntoWorkingBuffer(size_t trackIndex,
                                     const juce::AudioBuffer<float>* sourceTrack,
                                     int numSamples,
                                     std::int64_t blockStartSample);
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
+    void refreshAnySoloStateFromParams() noexcept;
     bool isAnySoloActive() const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerEngine)

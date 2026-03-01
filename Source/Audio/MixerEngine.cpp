@@ -279,7 +279,7 @@ bool MixerEngine::getIsAnyTrackSoloed() const noexcept
 void MixerEngine::parameterChanged(const juce::String& parameterID, float newValue)
 {
     juce::ignoreUnused(newValue);
-    if (parameterID.endsWith("_Solo"))
+    if (parameterID.endsWith("_Solo") || parameterID.endsWith("_Mute"))
         refreshAnySoloStateFromParams();
 }
 

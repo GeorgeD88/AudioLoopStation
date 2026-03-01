@@ -22,6 +22,11 @@ MixerEngine::MixerEngine()
     }
 }
 
+MixerEngine::~MixerEngine()
+{
+    detachParameters();
+}
+
 void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
 {
     // setup for audio thread
@@ -49,6 +54,9 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
 
 void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
 {
+    detachParameters();
+    attachedApvts = &apvts;
+
     // hook APVTS params here (value names might change later, these are temporary)
     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
@@ -60,9 +68,28 @@ void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
         muteParams[i] = apvts.getRawParameterValue(prefix + "Mute");
         soloParams[i] = apvts.getRawParameterValue(prefix + "Solo");
 
+        apvts.addParameterListener(prefix + "Mute", this);
+        apvts.addParameterListener(prefix + "Solo", this);
+
     }
 
-    // TODO: double-check these IDs with Maddox
+    refreshAnySoloStateFromParams();
+}
+
+void MixerEngine::detachParameters()
+{
+    if (attachedApvts == nullptr)
+        return;
+
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    {
+        auto idx = juce::String(i + 1);
+        auto prefix = "Track" + idx + "_";
+        attachedApvts->removeParameterListener(prefix + "Mute", this);
+        attachedApvts->removeParameterListener(prefix + "Solo", this);
+    }
+
+    attachedApvts = nullptr;
 }
 
 void MixerEngine::setGlobalSampleCounter(std::atomic<std::int64_t>* counter) noexcept
@@ -137,6 +164,8 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
     // master buffer is rebuilt every block by summing trackWorkingBuffers
     masterOutput.clear();
 
+    const bool anySoloActive = isAnySoloActive();
+
     // read params per block (audio thread), process each track, then sum into master
     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
@@ -151,6 +180,12 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
 
         lastVolDb[i] = volValue;
         lastPan[i] = pan;
+
+        const bool trackMuted = muteParams[i] != nullptr && muteParams[i]->load() > 0.5f;
+        const bool trackSoloed = soloParams[i] != nullptr && soloParams[i]->load() > 0.5f;
+        const bool trackAudible = anySoloActive ? trackSoloed : !trackMuted;
+        if (!trackAudible)
+            continue;
 
         const juce::AudioBuffer<float>* sourceTrack =
             i < inputTracks.size() ? inputTracks[i] : nullptr;
@@ -233,13 +268,31 @@ float MixerEngine::getLastPan(size_t track) const
 
 bool MixerEngine::isAnySoloActive() const
 {
-    
-    // helper for mute/solo logic later
+    return isAnyTrackSoloed.load(std::memory_order_relaxed);
+}
+
+bool MixerEngine::getIsAnyTrackSoloed() const noexcept
+{
+    return isAnyTrackSoloed.load(std::memory_order_relaxed);
+}
+
+void MixerEngine::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    juce::ignoreUnused(newValue);
+    if (parameterID.endsWith("_Solo") || parameterID.endsWith("_Mute"))
+        refreshAnySoloStateFromParams();
+}
+
+void MixerEngine::refreshAnySoloStateFromParams() noexcept
+{
+    bool anySolo = false;
     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
         if (soloParams[i] != nullptr && soloParams[i]->load() > 0.5f)
-            return true;
+        {
+            anySolo = true;
+            break;
+        }
     }
-
-    return false;
+    isAnyTrackSoloed.store(anySolo, std::memory_order_relaxed);
 }

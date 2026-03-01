@@ -112,6 +112,17 @@ static void setTrackParams(juce::AudioProcessorValueTreeState& apvts, int track,
     apvts.getRawParameterValue(prefix + "Pan")->store(pan);
 }
 
+static void setTrackMuteSolo(juce::AudioProcessorValueTreeState& apvts, int track, bool mute, bool solo)
+{
+    const auto prefix = "Track" + juce::String(track + 1) + "_";
+
+    if (auto* muteParam = apvts.getParameter(prefix + "Mute"))
+        muteParam->setValueNotifyingHost(mute ? 1.0f : 0.0f);
+
+    if (auto* soloParam = apvts.getParameter(prefix + "Solo"))
+        soloParam->setValueNotifyingHost(solo ? 1.0f : 0.0f);
+}
+
 class MixerTask31Tests : public juce::UnitTest
 {
 public:
@@ -374,6 +385,80 @@ public:
 };
 
 static MixerTestsExtra mixerTestsExtra;
+
+class MixerTask32Tests : public juce::UnitTest
+{
+public:
+    MixerTask32Tests() : juce::UnitTest("MixerTask32Tests") {}
+
+    void runTest() override
+    {
+        beginTest("mute applies normally when no track is soloed");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);  
+            mixer.prepare(48000.0, 32);
+
+            setTrackParams(apvts, 0, 1.0f, 0.0f);    
+
+            setTrackParams(apvts, 1, 1.0f, 0.0f);
+            setTrackMuteSolo(apvts, 0, true, false); 
+            setTrackMuteSolo(apvts, 1, false, false);
+
+            juce::AudioBuffer<float> t0(2, 32), t1(2, 32);
+            fillBuffer(t0, 1.0f);
+            fillBuffer(t1, 1.0f); 
+            std::vector<juce::AudioBuffer<float>*> inputs { &t0, &t1 };
+
+            juce::AudioBuffer<float> out(2, 32);
+            out.clear();
+
+            mixer.process(inputs, out);
+
+            expect(!mixer.getIsAnyTrackSoloed(), " No solo buttons are active, so global solo state should be false .");
+
+            expectWithinAbsoluteError(out.getSample(0, 0), 0.25f, 0.02f, "Only one unmuted track should contribute");
+            expectWithinAbsoluteError(out.getSample(1, 0), 0.25f, 0.02f, "only one unmuted track should contribute.");
+
+        }
+
+        beginTest("solo state overrides mute hierarchy");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 32);
+
+            setTrackParams(apvts, 0, 1.0f, 0.0f);
+            setTrackParams(apvts, 1, 1.0f, 0.0f);  
+
+            juce::AudioBuffer<float> t0(2, 32), t1(2, 32);
+            fillBuffer(t0, 1.0f);
+            fillBuffer(t1, 1.0f);
+            std::vector<juce::AudioBuffer<float>*> inputs { &t0, &t1 };
+
+            // Track 1 is soloed but also muted --  with any solo active, solo track still contributes
+            setTrackMuteSolo(apvts, 0, true, true);
+            setTrackMuteSolo(apvts, 1, false, false);  
+ 
+            juce::AudioBuffer<float> out(2, 32);
+            out.clear();
+            mixer.process(inputs, out);
+
+            expect(mixer.getIsAnyTrackSoloed(), " Solo listener should raise global solo state. ");
+
+            expectWithinAbsoluteError(out.getSample(0, 0), 0.25f, 0.02f, "soloed track should pass while non-solo track is ignored");
+            expectWithinAbsoluteError(out.getSample(1, 0), 0.25f, 0.02f, "Soloed track should pass while non-solo track is ignored");
+        }
+    }
+};
+
+static MixerTask32Tests mixerTask32Tests;
 
 class MixerTask34Tests : public juce::UnitTest
 {

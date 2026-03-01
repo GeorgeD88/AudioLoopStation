@@ -4,9 +4,11 @@
 MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
     : audioProcessor(processor),
       waveformDisplay(processor.getFormatManager()),
+      vuMeter([&proc = processor] { return proc.getOutputLevel(); }),
       trackControlPanel(processor.getApvts())
 {
     addAndMakeVisible(waveformDisplay);
+    addAndMakeVisible(vuMeter);
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);
 }
@@ -40,8 +42,12 @@ void MainComponent::resized()
     flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
     flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
-    // Waveform display at top
-    flexBox.items.add(juce::FlexItem(waveformDisplay)
+    // Waveform + VU meter row
+    juce::FlexBox topRow;
+    topRow.flexDirection = juce::FlexBox::Direction::row;
+    topRow.items.add(juce::FlexItem(waveformDisplay).withFlex(1.0f).withMinWidth(100.0f));
+    topRow.items.add(juce::FlexItem(vuMeter).withWidth(30.0f).withMinWidth(20.0f).withMaxWidth(50.0f).withMargin(4.0f));
+    flexBox.items.add(juce::FlexItem(topRow)
                           .withHeight(120.0f)
                           .withMinHeight(80.0f)
                           .withMaxHeight(200.0f));

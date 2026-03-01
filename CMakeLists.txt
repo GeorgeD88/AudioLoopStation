@@ -27,6 +27,17 @@ CPMAddPackage(
         GIT_TAG origin/master
 )
 
+# Tells CMake to download the Gin library automatically
+CPMAddPackage(
+        NAME gin
+        GITHUB_REPOSITORY figbug/Gin
+        GIT_TAG master
+        DOWNLOAD_ONLY YES  # This stops the "duplicate target" error
+)
+
+# Tell CMake where the Gin modules are (Required for the Gin modules below)
+add_subdirectory(${gin_SOURCE_DIR}/modules gin_modules)
+
 # Make sure you include any new source files here
 set(SourceFiles
         Source/PluginEditor.cpp                                         # Wrapper for UI
@@ -44,7 +55,6 @@ set(SourceFiles
         Source/Audio/MixerEngine.h
         Source/Audio/SyncEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
-        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -58,6 +68,8 @@ set(SourceFiles
         Source/UI/Components/TrackControlPanel.h
         Source/UI/Components/WaveformDisplayComponent.cpp
         Source/UI/Components/WaveformDisplayComponent.h
+        Source/UI/Components/VUMeterComponent.cpp
+        Source/UI/Components/VUMeterComponent.h
 
         # Tests - cmake target not needed
 
@@ -96,9 +108,6 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
-
-# Gin modules
-add_subdirectory(modules/gin/modules)
 
 # JUCE libraries to bring into our project
 target_link_libraries(${PROJECT_NAME}

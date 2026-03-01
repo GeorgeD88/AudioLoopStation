@@ -240,29 +240,36 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // Clear output channels that don't contain input data
+    // 1. Clear only the extra output channels (standard JUCE practice)
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    /** Let LoopManager process everything:
-     * - Tracks record from buffer (input)
-     * - Tracks play to their internal buffers
-     * - LoopManager sums all tracks to buffer (output)
-     */
+    // 2. Process Loops: This fills 'buffer' with the summed audio of all tracks
     loopManager.processBlock(buffer);
 
-    // Get track outputs from LoopManager
-    auto trackOutputs = loopManager.getTrackOutputs();
+    // 3. Add Transport Source: Use a temporary buffer so we don't overwrite the loops
+    if (readerSource.get() != nullptr)
+    {
+        juce::AudioBuffer<float> transportBuffer (buffer.getNumChannels(), buffer.getNumSamples());
+        transportBuffer.clear();
 
-    // Clear buffer
-    buffer.clear();
+        juce::AudioSourceChannelInfo info(&transportBuffer, 0, transportBuffer.getNumSamples());
+        transportSource.getNextAudioBlock(info);
 
-    // Mix outputs
-    mixerEngine.process(trackOutputs, buffer);
+        // Add the transport audio TO the loop audio instead of replacing it
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+            buffer.addFrom(ch, 0, transportBuffer, ch, 0, buffer.getNumSamples());
+    }
 
-    // Update playback state
-    isPlaying_ = (loopManager.isAnyTrackRecording()
-            || !loopManager.isAllTracksEmpty());
+    // 4. Update VU Meter: Now measuring the COMBINED output of loops + transport
+    float peak = 0.0f;
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* data = buffer.getReadPointer(ch);
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+            peak = juce::jmax(peak, std::abs(data[i]));
+    }
+    outputLevel.store(peak, std::memory_order_relaxed);
 }
 
 //==============================================================================

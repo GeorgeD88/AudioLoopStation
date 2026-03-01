@@ -40,6 +40,7 @@ private:
 
     // Scratch buffers used each block before summing into master.
     std::array<juce::AudioBuffer<float>, TrackConfig::MAX_TRACKS> trackWorkingBuffers{};
+    std::vector<float> gainRampScratch;
 
     double sampleRate = 0.0;
     int blockSize = 0;
@@ -56,4 +57,3 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerEngine)
 };
-

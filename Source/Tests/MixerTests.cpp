@@ -374,3 +374,99 @@ public:
 };
 
 static MixerTestsExtra mixerTestsExtra;
+
+class MixerTask34Tests : public juce::UnitTest
+{
+public:
+    MixerTask34Tests() : juce::UnitTest("MixerTask34Tests") {}
+
+    void runTest() override
+    {
+        beginTest("simd mixing matches expected summed output");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 16);
+
+            std::vector<juce::AudioBuffer<float>> trackStorage;
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            trackStorage.reserve(TrackConfig::MAX_TRACKS);
+            inputs.reserve(TrackConfig::MAX_TRACKS);
+
+            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            {
+                setTrackParams(apvts, i, 1.0f, 0.0f);
+                trackStorage.emplace_back(2, 16);
+                inputs.push_back(&trackStorage.back());
+            }
+
+            for (int track = 0; track < TrackConfig::MAX_TRACKS; ++track)
+            {
+                for (int ch = 0; ch < 2; ++ch)
+                {
+                    auto* data = trackStorage[static_cast<size_t>(track)].getWritePointer(ch);
+                    for (int s = 0; s < 16; ++s)
+                        data[s] = static_cast<float>((track + 1) * (s + 1)) * 0.01f;
+                }
+            }
+
+            juce::AudioBuffer<float> output(2, 16);
+            output.clear();
+            mixer.process(inputs, output);
+
+            for (int s = 0; s < 16; ++s)
+            {
+                float sum = 0.0f;
+                for (int track = 0; track < TrackConfig::MAX_TRACKS; ++track)
+                    sum += trackStorage[static_cast<size_t>(track)].getSample(0, s);
+
+                const float expected = juce::jlimit(-1.0f, 1.0f, sum * MixerEngine::kDefaultHeadroomScale);
+                expectWithinAbsoluteError(output.getSample(0, s), expected, 0.0001f);
+                expectWithinAbsoluteError(output.getSample(1, s), expected, 0.0001f);
+            }
+        }
+
+        beginTest("simd gain ramp moves level across a block");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 64);
+
+            juce::AudioBuffer<float> track0(2, 64);
+            fillBuffer(track0, 1.0f);
+
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            inputs.push_back(&track0);
+
+            // let smoother settle near zero
+            setTrackParams(apvts, 0, 0.0f, 0.0f);
+            juce::AudioBuffer<float> output(2, 64);
+            for (int i = 0; i < 32; ++i)
+            {
+                output.clear();
+                mixer.process(inputs, output);
+            }
+
+            //  trigger an upward ramp and verify block starts lower than it ends.
+            setTrackParams(apvts, 0, 1.0f, 0.0f);
+            output.clear();
+            mixer.process(inputs, output);
+
+            const float first = output.getSample(0, 0);
+            const float middle = output.getSample(0, 32);
+            const float last = output.getSample(0, 63);
+
+            expect(middle > first, "expected ramped gain to increase through the block.");
+            expect(last > middle, "Expected end of block to be louder than middle..");
+            expect(last <= 0.26f, " Headroom should keep single-track output around 0.25 max");
+        }
+    }
+};
+
+static MixerTask34Tests mixerTask34Tests;

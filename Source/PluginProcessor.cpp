@@ -82,7 +82,8 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
-    apvts.removeParameterListener("tempo", this);
+    mixerEngine.detachParameters();
+    apvts.removeParameterListener("Tempo", this);
 }
 
 //==============================================================================

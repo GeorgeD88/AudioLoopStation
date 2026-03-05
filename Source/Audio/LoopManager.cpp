@@ -44,6 +44,8 @@ void LoopManager::releaseResources() {
 
 void LoopManager::processBlock(const juce::AudioBuffer<float> &input) {
     const int numSamples = input.getNumSamples();
+    checkLoopBoundary(syncEngine.getGlobalSample(), numSamples);
+    processCommands();
 
     // 1. Handle sync (advance the global clock)
     syncEngine.advance(numSamples);
@@ -199,6 +201,94 @@ bool LoopManager::isTrackArmed(size_t index) const {
         return track->isArmed();
     return false;
 }
+
+void LoopManager::postCommand(const LoopCommand &command) {
+    commandQueue.write(command);
+}
+
+void LoopManager::processCommands() {
+    while (auto cmd = commandQueue.read())
+    {
+        // Validate range FIRST - prevents any invalid access
+        if (!juce::isPositiveAndBelow(cmd->trackIndex, TrackConfig::MAX_TRACKS))
+        {
+            DBG("Ignoring command for invalid track: " + juce::String(cmd->trackIndex));
+            continue;
+        }
+
+        // Safe conversion - we've guaranteed it's in range
+        auto trackIdx = static_cast<size_t>(cmd->trackIndex);
+        auto* track = tracks[trackIdx].get();
+
+        // 2. Clean switch with no conditionals inside cases
+        switch (cmd->type) {
+
+            case LoopCommandType::None:
+                break;
+
+            case LoopCommandType::ArmTrack:
+                track->armForRecording(true);
+                break;
+
+            case LoopCommandType::StartRecording:
+                track->startRecording(cmd->scheduledSample);
+                // Special case for Track 1 setting master loop
+                if (trackIdx == 0 && track->hasLoop())
+                    syncEngine.setMasterLoopLength(track->getLoopLengthSamples());
+                break;
+
+            case LoopCommandType::StopRecording:
+                track->stopRecording();
+                break;
+
+            case LoopCommandType::ClearTrack:
+                track->clear();
+                break;
+
+            default:
+                DBG("Unknown command type received");
+                jassertfalse;
+                break;
+        }
+    }
+}
+
+void LoopManager::requestTrackRecording(size_t trackIndex)
+{
+    auto* track = getTrack(trackIndex);
+    if (!track) return;
+
+    // Arm the track (this puts it in Queued state)
+    track->armForRecording(true);
+
+    // Track 1 or no master loop? Start now
+    if (trackIndex == 0 || !syncEngine.hasMasterLoop()) {
+        postCommand({ LoopCommandType::StartRecording, trackIndex, syncEngine.getGlobalSample() });
+    } else {
+        // Just mark as pending - will start at next loop boundary
+        pendingRecordRequests[trackIndex] = true;
+    }
+}
+
+// Call this at the START of processBlock
+void LoopManager::checkLoopBoundary(juce::int64 currentSample, int numSamples)
+{
+    if (!syncEngine.hasMasterLoop()) return;
+
+    juce::int64 nextBoundary = ((currentSample / syncEngine.getLoopLengthSamples()) + 1)
+                               * syncEngine.getLoopLengthSamples();
+
+    // If we're crossing a boundary in this block
+    if (nextBoundary - currentSample < numSamples) {
+        for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+            if (pendingRecordRequests[i]) {
+                postCommand({ LoopCommandType::StartRecording, i, nextBoundary });
+                pendingRecordRequests[i] = false;
+            }
+        }
+    }
+}
+
 
 /** TODO: Ensure migration to MixerEngine or delete what is already immplemented there
 bool LoopManager::isTrackMuted(size_t index) const {

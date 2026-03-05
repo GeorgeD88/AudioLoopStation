@@ -38,8 +38,8 @@ public:
 private:
     juce::AudioFormatManager formatManager;     // Save only SamplePlayer handles load and play
 
-    bool writeTrackToStream(juce::OutputStream& stream, const LoopTrack& track);
-    bool readTrackFromStream(juce::InputStream& stream, LoopTrack& track);
+    static bool writeTrackToStream(juce::OutputStream& stream, const LoopTrack& track);
+    static bool readTrackFromStream(juce::InputStream& stream, LoopTrack& track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopFileHandler)
 };

@@ -255,11 +255,24 @@ void LoopTrack::applyDspProcessing(juce::AudioBuffer<float> &bufferToProcess) {
 
 void LoopTrack::armForRecording(bool isArmed) {
     isArmedForRecording.store(isArmed);
+
+    // if arming and quantized start is needed -> queued state
+    if (isArmed) {
+        // if armed and empty, set state to Queued
+        if (currentState.load() == State::Empty) {
+            currentState.store(State::Queued);
+        }
+    } else {
+        // If track isn't armed and in queued state, go back to empty
+        if (currentState.load() == State::Queued){
+            currentState.store(State::Empty);
+        }
+    }
 }
 
 void LoopTrack::startRecording(juce::int64 globalSample) {
-
-    if(!isArmedForRecording.load()) return;
+    // Can only start recording from Queued state
+    if(currentState.load() != State::Queued) return;
 
     recordingStartGlobalSample.store(globalSample);
     isRecordingActive.store(true);
@@ -302,9 +315,21 @@ void LoopTrack::stopPlayback() {
     }
 }
 
+void LoopTrack::stopQueue() {
+    if (currentState.load() == State::Queued) {
+        currentState.store(State::Empty);
+        isArmedForRecording.store(false);
+    }
+}
+
+
 void LoopTrack::stop() {
-    stopRecording();
-    stopPlayback();
+    if (currentState.load() == State::Queued) {
+        stopQueue();
+    } else {
+        stopRecording();
+        stopPlayback();
+    }
 }
 
 /**
@@ -487,6 +512,7 @@ void LoopTrack::applySlip(juce::AudioBuffer<float>& buffer) {
 juce::String LoopTrack::getStateString() const {
     switch (currentState.load()) {
         case State::Empty:          return "Empty";
+        case State::Queued:         return "Queue";
         case State::Recording:      return "REC";
         case State::Playing:        return "Play";
         case State::Stopped:        return "Stop";

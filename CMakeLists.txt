@@ -144,9 +144,15 @@ target_sources(AudioLoopStation_Tests
         PRIVATE
         Source/Tests/TestRunner.cpp
         Source/Tests/MixerTests.cpp
+        Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
+        Source/Audio/LoopManager.cpp
+        Source/Audio/LoopManager.h
+        Source/Audio/LoopTrack.cpp
+        Source/Audio/LoopTrack.h
+        Source/Audio/SyncEngine.h
         Source/Utils/TrackConfig.h
 )
 
@@ -156,5 +162,8 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_processors
+        juce::juce_audio_formats
         juce::juce_dsp
+        gin
+        gin_dsp
 )

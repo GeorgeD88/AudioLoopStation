@@ -140,9 +140,7 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input,
 
     // === Playback ===
     bool shouldPlay = (state == State::Playing || state == State::Recording)
-            && hasLoop()
-            && !muteState.load()
-            && !soloState.load();
+            && hasLoop();
 
     if (shouldPlay) {
         // If it's the first time hitting play, load the buffer into Gin's SamplePlayer

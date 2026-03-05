@@ -30,6 +30,7 @@ public:
     // Recording state machine
     enum class State {
         Empty,                  // No loop recorded
+        Queued,                  // Armed and waiting for quantized start
         Recording,              // Recording the initial loop
         Playing,                // Playing back the recorded loop
         Stopped                 // Loop exists but is silent
@@ -52,6 +53,7 @@ public:
     void stopRecording();
     void startPlayback();
     void stopPlayback();
+    void stopQueue();
     void stop();
     void clear();                                               // Clear loop
 

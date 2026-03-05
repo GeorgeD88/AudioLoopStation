@@ -72,8 +72,8 @@ bool LoopFileHandler::writeTrackToStream(juce::OutputStream &stream, const LoopT
     stream.writeFloat(track.getCurrentPan());
     stream.writeBool(track.isMuted());
     stream.writeBool(track.isSoloed());
-    // TODO: write reversed state
-    // TODO: write slip offset amount to track
+    stream.writeBool(track.isReversed());
+    stream.writeInt(track.getSlipOffset());
 
     // Write audio data
     const auto& buffer = track.getAudioBuffer();
@@ -96,16 +96,16 @@ bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &
     float pan = stream.readFloat();
     bool muted = stream.readBool();
     bool soloed = stream.readBool();
-    // TODO: read reverse state
-    // TODO: read slip amount (int)
+    bool reversed = stream.readBool();
+    int offset = stream.readInt();
 
     // Apply settings
     track.setVolumeDb(volume);
     track.setPan(pan);
     track.setSolo(soloed);
     track.setMute(muted);
-    // TODO: Apply reverse state
-    // TODO: Apply slip amount (int)
+    track.setReverse(reversed);
+    track.setSlip(offset);
 
     // Read audio data
     int numSamples = stream.readInt();

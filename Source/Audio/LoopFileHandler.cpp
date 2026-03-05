@@ -126,11 +126,24 @@ bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &
 
 bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManager &loopManager,
                                   const SyncEngine &syncEngine) {
+    // Avoid unused parameter warnings while this is a TODO
+    juce::ignoreUnused(destination, loopManager, syncEngine);
+
     // TODO: Save project state
+    DBG("Save Project: Not yet implemented");
+
+    return true;
 }
 
 bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopManager, SyncEngine &syncEngine) {
+
+    // Avoid unused parameter warnings while this is a TODO
+    juce::ignoreUnused(source, loopManager, syncEngine);
+
     // TODO: Handle loading full projects
+    DBG("Load Project: Not yet implemented");
+
+    return true;
 }
 
 juce::StringArray LoopFileHandler::getSupportedExtensions() {

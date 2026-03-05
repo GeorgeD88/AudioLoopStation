@@ -27,6 +27,17 @@ CPMAddPackage(
         GIT_TAG origin/master
 )
 
+# Tells CMake to download the Gin library automatically
+CPMAddPackage(
+        NAME gin
+        GITHUB_REPOSITORY figbug/Gin
+        GIT_TAG master
+        DOWNLOAD_ONLY YES  # This stops the "duplicate target" error
+)
+
+# Tell CMake where the Gin modules are (Required for the Gin modules below)
+add_subdirectory(${gin_SOURCE_DIR}/modules gin_modules)
+
 # Make sure you include any new source files here
 set(SourceFiles
         Source/PluginEditor.cpp                                         # Wrapper for UI
@@ -44,7 +55,6 @@ set(SourceFiles
         Source/Audio/MixerEngine.h
         Source/Audio/SyncEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
-        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -58,6 +68,8 @@ set(SourceFiles
         Source/UI/Components/TrackControlPanel.h
         Source/UI/Components/WaveformDisplayComponent.cpp
         Source/UI/Components/WaveformDisplayComponent.h
+        Source/UI/Components/VUMeterComponent.cpp
+        Source/UI/Components/VUMeterComponent.h
 
         # Tests - cmake target not needed
 
@@ -97,9 +109,6 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
-# Gin modules
-add_subdirectory(modules/gin/modules)
-
 # JUCE libraries to bring into our project
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
@@ -135,9 +144,15 @@ target_sources(AudioLoopStation_Tests
         PRIVATE
         Source/Tests/TestRunner.cpp
         Source/Tests/MixerTests.cpp
+        Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
+        Source/Audio/LoopManager.cpp
+        Source/Audio/LoopManager.h
+        Source/Audio/LoopTrack.cpp
+        Source/Audio/LoopTrack.h
+        Source/Audio/SyncEngine.h
         Source/Utils/TrackConfig.h
 )
 
@@ -147,5 +162,8 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_processors
+        juce::juce_audio_formats
         juce::juce_dsp
+        gin
+        gin_dsp
 )

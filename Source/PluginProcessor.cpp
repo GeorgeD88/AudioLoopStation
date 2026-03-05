@@ -99,6 +99,7 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
+    mixerEngine.detachParameters();
     apvts.removeParameterListener("Tempo", this);
 }
 
@@ -188,13 +189,13 @@ void AudioLoopStationAudioProcessor::changeProgramName (int index, const juce::S
 void AudioLoopStationAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Get channel config
-    int numInputChannels = getTotalNumInputChannels();
+    int numTrackChannels = juce::jmax(1, getTotalNumOutputChannels());
 
     // Prepare SyncEngine
     syncEngine.prepare(sampleRate, samplesPerBlock);
 
     // Prepare LoopManager
-    loopManager.prepareToPlay(sampleRate, samplesPerBlock, numInputChannels);
+    loopManager.prepareToPlay(sampleRate, samplesPerBlock, numTrackChannels);
 
     // Prepare MixerEngine
     mixerEngine.prepare(sampleRate, samplesPerBlock);
@@ -240,29 +241,39 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // Clear output channels that don't contain input data
+    // 1. Clear only the extra output channels (standard JUCE practice)
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    /** Let LoopManager process everything:
-     * - Tracks record from buffer (input)
-     * - Tracks play to their internal buffers
-     * - LoopManager sums all tracks to buffer (output)
-     */
+    // 2. Process loop tracks into per-track buffers.
     loopManager.processBlock(buffer);
 
-    // Get track outputs from LoopManager
-    auto trackOutputs = loopManager.getTrackOutputs();
+    // 3. Route per-track outputs through the mixer into the master output.
+    mixerEngine.process(loopManager.getTrackOutputs(), buffer);
 
-    // Clear buffer
-    buffer.clear();
+    // 4. Add Transport Source: Use a temporary buffer so we don't overwrite the loops
+    if (readerSource.get() != nullptr)
+    {
+        juce::AudioBuffer<float> transportBuffer (buffer.getNumChannels(), buffer.getNumSamples());
+        transportBuffer.clear();
 
-    // Mix outputs
-    mixerEngine.process(trackOutputs, buffer);
+        juce::AudioSourceChannelInfo info(&transportBuffer, 0, transportBuffer.getNumSamples());
+        transportSource.getNextAudioBlock(info);
 
-    // Update playback state
-    isPlaying_ = (loopManager.isAnyTrackRecording()
-            || !loopManager.isAllTracksEmpty());
+        // Add the transport audio TO the loop audio instead of replacing it
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+            buffer.addFrom(ch, 0, transportBuffer, ch, 0, buffer.getNumSamples());
+    }
+
+    // 5. Update VU Meter: Now measuring the COMBINED output of loops + transport
+    float peak = 0.0f;
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* data = buffer.getReadPointer(ch);
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+            peak = juce::jmax(peak, std::abs(data[i]));
+    }
+    outputLevel.store(peak, std::memory_order_relaxed);
 }
 
 //==============================================================================

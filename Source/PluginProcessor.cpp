@@ -172,13 +172,13 @@ void AudioLoopStationAudioProcessor::changeProgramName (int index, const juce::S
 void AudioLoopStationAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Get channel config
-    int numInputChannels = getTotalNumInputChannels();
+    int numTrackChannels = juce::jmax(1, getTotalNumOutputChannels());
 
     // Prepare SyncEngine
     syncEngine.prepare(sampleRate, samplesPerBlock);
 
     // Prepare LoopManager
-    loopManager.prepareToPlay(sampleRate, samplesPerBlock, numInputChannels);
+    loopManager.prepareToPlay(sampleRate, samplesPerBlock, numTrackChannels);
 
     // Prepare MixerEngine
     mixerEngine.prepare(sampleRate, samplesPerBlock);
@@ -233,8 +233,13 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
      * - Tracks play to their internal buffers
      * - LoopManager sums all tracks to buffer (output)
      */
+    // 2. Process loop tracks into per-track buffers.
     loopManager.processBlock(buffer);
 
+    // 3. Route per-track outputs through the mixer into the master output.
+    mixerEngine.process(loopManager.getTrackOutputs(), buffer);
+
+    // 4. Add Transport Source: Use a temporary buffer so we don't overwrite the loops
     // Get track outputs from LoopManager
     auto trackOutputs = loopManager.getTrackOutputs();
 
@@ -249,6 +254,7 @@ void AudioLoopStationAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
     }
 
     // Update level for VU metering (peak per block)
+    // 5. Update VU Meter: Now measuring the COMBINED output of loops + transport
     float peak = 0.0f;
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
     {

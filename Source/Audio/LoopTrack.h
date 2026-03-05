@@ -78,6 +78,8 @@ public:
     bool isArmed() const noexcept { return isArmedForRecording.load(); }
     bool isMuted() const noexcept { return muteState.load(); }
     bool isSoloed() const noexcept { return soloState.load(); }
+    bool isReversed() const noexcept { return reverseState.load(); }
+    int getSlipOffset() const noexcept { return slipOffset.load(); }
     float getCurrentVolumeDb() const noexcept { return currentVolumeDb.load(); }
     float getCurrentPan() const noexcept { return currentPan.load(); }
     juce::String getStateString() const;

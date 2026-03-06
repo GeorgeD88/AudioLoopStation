@@ -5,8 +5,10 @@
 #pragma once
 #include "LoopTrack.h"
 #include "LoopManager.h"
+#include "AlsFormat.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_basics/juce_audio_basics.h"
+#include "juce_data_structures/juce_data_structures.h"
 #include "../Utils/TrackConfig.h"
 
 /**

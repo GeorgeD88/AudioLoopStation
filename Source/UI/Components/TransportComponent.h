@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../../PluginProcessor.h"
 
 //==============================================================================
 class TransportComponent final : public juce::Component
@@ -10,11 +11,15 @@ public:
     ~TransportComponent() override;
 
     //==============================================================================
+    void setAudioProcessor(AudioLoopStationAudioProcessor* processor);
     void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
     void setupButtons();
+    void updateButtonStates();
+
+    AudioLoopStationAudioProcessor* audioProcessor = nullptr;
 
     juce::TextButton recordButton { "RECORD" };
     juce::TextButton playButton { "PLAY" };

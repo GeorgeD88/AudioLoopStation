@@ -365,7 +365,6 @@ void LoopTrack::clear() {
 
 void LoopTrack::setLoopLength(int samples) {
     jassert(samples > 0);
-    jassert(samples <= recordingBuffer.getNumReady());
 
     loopLengthSamples.store(samples);
 

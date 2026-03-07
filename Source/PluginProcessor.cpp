@@ -329,6 +329,25 @@ void AudioLoopStationAudioProcessor::stopPlayback()
     isPlaying_ = false;
 }
 
+void AudioLoopStationAudioProcessor::requestTrackRecording(int trackIndex) {
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(TrackConfig::MAX_TRACKS)) {
+        loopManager.requestTrackRecording(static_cast<size_t>(trackIndex));
+    }
+}
+
+void AudioLoopStationAudioProcessor::cancelTrackRecording(int trackIndex) {
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(TrackConfig::MAX_TRACKS)) {
+        loopManager.cancelTrackRecording(static_cast<size_t>(trackIndex));
+    }
+}
+
+void AudioLoopStationAudioProcessor::clearTrack(int trackIndex) {
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(TrackConfig::MAX_TRACKS)) {
+        loopManager.postCommand({ LoopCommandType::ClearTrack,
+                                  static_cast<size_t>(trackIndex), 0});
+    }
+}
+
 //==============================================================================
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {

@@ -11,23 +11,64 @@ TransportComponent::~TransportComponent()
 }
 
 //==============================================================================
+void TransportComponent::setAudioProcessor(AudioLoopStationAudioProcessor *processor) {
+    audioProcessor = processor;
+    updateButtonStates();
+}
+
 void TransportComponent::setupButtons()
 {
     recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     recordButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkred);
+    recordButton.onClick = [this]()
+    {
+        DBG("[UI] GLOBAL RECORD");
+        // for now just toggle - could arm first track
+        if (audioProcessor) {
+            audioProcessor->requestTrackRecording(0);
+        }
+    };
     addAndMakeVisible(recordButton);
 
     playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     playButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkgreen);
+    playButton.onClick = [this]()
+    {
+        DBG("[UI] PLAY");
+        if (audioProcessor) {
+            audioProcessor->startPlayback();
+            updateButtonStates();
+        }
+    };
     addAndMakeVisible(playButton);
 
     stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::orange);
     stopButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkorange);
+    stopButton.onClick = [this]()
+    {
+        DBG("[UI] STOP");
+        if (audioProcessor) {
+            audioProcessor->stopPlayback();
+            updateButtonStates();
+        }
+    };
     addAndMakeVisible(stopButton);
 
     undoButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
     undoButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkblue);
+    undoButton.onClick = [this]()
+    {
+        DBG("[UI] UNDO (not implemented)");
+    };
     addAndMakeVisible(undoButton);
+}
+
+void TransportComponent::updateButtonStates() {
+    if (!audioProcessor) return;
+
+    // Update play button state based on transport
+    bool isPlaying = audioProcessor->isPlaying();
+    playButton.setToggleState(isPlaying, juce::dontSendNotification);
 }
 
 void TransportComponent::paint (juce::Graphics& g)

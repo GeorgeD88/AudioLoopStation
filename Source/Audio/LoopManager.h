@@ -69,6 +69,7 @@ public:
     void postCommand(const LoopCommand& command);
     void processCommands();
     void requestTrackRecording(size_t trackIndex);
+    void cancelTrackRecording(size_t trackIndex);
     void checkLoopBoundary(juce::int64 currentSample, int numSamples);
 
     /** TODO: Verify in MixerEngine or move

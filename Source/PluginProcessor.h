@@ -72,6 +72,10 @@ public:
     void stopPlayback();
     bool isPlaying() const { return isPlaying_; }
 
+    void requestTrackRecording(int trackIndex);
+    void cancelTrackRecording(int trackIndex);
+    void clearTrack(int trackIndex);
+
 private:
     // === Core components ===
     SyncEngine syncEngine;                          // 1. Global timekeeper

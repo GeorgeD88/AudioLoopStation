@@ -253,6 +253,22 @@ void LoopManager::processCommands() {
     }
 }
 
+void LoopManager::cancelTrackRecording(size_t trackIndex) {
+    if (trackIndex >= TrackConfig::MAX_TRACKS) return;
+
+    // clear pending request if waiting
+    if (pendingRecordRequests[trackIndex]) {
+        pendingRecordRequests[trackIndex] = false;
+    }
+
+    // Tell track to leave Qd state
+    if (auto* track = getTrack(trackIndex)) {
+        track->stopQueue();
+    }
+
+    DBG("CANCEL_REC track=" << trackIndex);
+}
+
 void LoopManager::requestTrackRecording(size_t trackIndex)
 {
     auto* track = getTrack(trackIndex);

@@ -131,8 +131,6 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         gin
         gin_dsp
-        gin_gui
-        gin_plugin
 )
 
 # tiny console test runner (separate from the plugin)

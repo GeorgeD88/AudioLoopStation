@@ -1,31 +1,19 @@
 #include "TrackControlPanel.h"
-#include "../../PluginProcessor.h"
 
 //==============================================================================
-TrackControlPanel::TrackControlPanel(AudioLoopStationAudioProcessor& processor)
-    : apvts(processor.getApvts())
+TrackControlPanel::TrackControlPanel(AudioLoopStationAudioProcessor& processor,
+                                     juce::AudioProcessorValueTreeState& apvtsRef)
+    : audioProcessor(processor), apvts(apvtsRef)
 {
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
-        trackStrips[i] = std::make_unique<TrackStripComponent>(i, apvts, processor.getLoopManager());
+        trackStrips[i] = std::make_unique<TrackStripComponent>(i, audioProcessor, apvts);
         addAndMakeVisible(*trackStrips[i]);
     }
-    startTimerHz(15);
 }
 
 TrackControlPanel::~TrackControlPanel()
 {
-    stopTimer();
-}
-
-void TrackControlPanel::timerCallback()
-{
-    for (auto& strip : trackStrips)
-        if (strip != nullptr)
-            strip->syncArmButtonWithEngine();
-    for (auto& strip : trackStrips)
-        if (strip != nullptr)
-            strip->repaint();
 }
 
 void TrackControlPanel::paint(juce::Graphics& g)

@@ -73,6 +73,10 @@ public:
     // Parameter creation
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
+    void requestTrackRecording(int trackIndex);
+    void cancelTrackRecording(int trackIndex);
+    void clearTrack(int trackIndex);
+
 private:
     // === Core components ===
     SyncEngine syncEngine;                          // 1. Global timekeeper

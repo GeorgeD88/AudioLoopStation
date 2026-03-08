@@ -117,8 +117,15 @@ void LoopTrack::processBlock(const juce::AudioBuffer<float> &input,
 
     // === Recording ===
     if (state == State::Recording && isRecordingActive.load()) {
+        DBG("[TRACK] Recording id=" << trackId
+                                    << " freeSpace=" << recordingBuffer.getFreeSpace()
+                                    << " numReady=" << recordingBuffer.getNumReady()
+                                    << " samples=" << numSamples);
+
         // Write to FIFO
         if (!recordingBuffer.write(input)){
+            DBG("[TRACK] Buffer full, ensuring space");
+
             // Buffer is full so overwrite the oldest sampled audio
             recordingBuffer.ensureFreeSpace(numSamples);
             recordingBuffer.write(input);

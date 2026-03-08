@@ -68,10 +68,11 @@ public:
 
     // === Transport control methods ===
     void loadFileToTrack(const juce::File& audioFile, int trackIndex);
+    void startRecording(int trackIndex);
+    void startRecordingOnArmedTrack();
     void startPlayback();
     void stopPlayback();
     bool isPlaying() const { return isPlaying_; }
-
     void requestTrackRecording(int trackIndex);
     void cancelTrackRecording(int trackIndex);
     void clearTrack(int trackIndex);

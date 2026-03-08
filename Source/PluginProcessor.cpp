@@ -317,6 +317,34 @@ void AudioLoopStationAudioProcessor::loadFileToTrack(const juce::File &audioFile
     }
 }
 
+void AudioLoopStationAudioProcessor::startRecordingOnArmedTrack()
+{
+    // Find the armed track
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+        auto* track = loopManager.getTrack(i);
+        if (track && track->isArmed()) {
+            // Found armed track - start it!
+            if (track->getState() == LoopTrack::State::Queued ||
+                track->getState() == LoopTrack::State::Empty) {
+                // It's ready to record, start now
+                loopManager.startRecording(i);
+                DBG("[PROC] Started recording on armed track " << i);
+            }
+            return;
+        }
+    }
+
+    DBG("[PROC] No armed track found");
+}
+
+void AudioLoopStationAudioProcessor::startRecording(int trackIndex)
+{
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(TrackConfig::MAX_TRACKS)) {
+        loopManager.startRecording(static_cast<size_t>(trackIndex));
+    }
+}
+
+
 void AudioLoopStationAudioProcessor::startPlayback()
 {
     loopManager.startAllPlayback();

@@ -60,6 +60,8 @@ void TrackStripComponent::setupControls()
     // Connect and make arm button visible
     recordArmButton.onClick = [this]()
     {
+        bool newState = recordArmButton.getToggleState();
+        DBG("ARM CLICK: Track " + juce::String(trackIndex) + " = " + (newState ? "ON" : "OFF"));
         if (recordArmButton.getToggleState())
         {
             DBG("[UI] ARM track=" << trackIndex);
@@ -125,46 +127,58 @@ void TrackStripComponent::timerCallback() {
     if (!track) return;
 
     auto state = track->getState();
+    bool isArmed = track->isArmed();
 
+    // If not armed, show grey (not selected)
+    if (!isArmed) {
+        recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                  juce::Colours::grey);
+        return;
+    }
+
+    // Track is armed (selected) - now show its state
     switch (state) {
-        case LoopTrack::State::Queued: {
-            // Blink yellow when waiting for quantized start
-            // Time-based blinking - 500ms on, 500ms off
-            auto now = juce::Time::getMillisecondCounter();
-            const int blinkInterval = 500; // milliseconds
+        case LoopTrack::State::Empty:
+            // Armed but empty - solid green (selected, ready to record)
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      juce::Colours::green);
+            break;
 
+        case LoopTrack::State::Queued:
+            // Count-in/waiting for quantized start - BLINKING YELLOW
+            // Faster blink for count-in (250ms)
+        {
+            auto now = juce::Time::getMillisecondCounter();
+            const int blinkInterval = 250; // milliseconds
             bool shouldBeOn = (now / blinkInterval) % 2 == 0;
 
             recordArmButton.setColour(juce::TextButton::buttonColourId,
                                       shouldBeOn ? juce::Colours::yellow : juce::Colours::darkgoldenrod);
-            break;
         }
+            break;
 
         case LoopTrack::State::Recording:
-            // Solid red when recording
+            // Recording - SOLID RED
             recordArmButton.setColour(juce::TextButton::buttonColourId,
                                       juce::Colours::red);
             break;
 
         case LoopTrack::State::Playing:
-            // Green when playing
+            // Playing - SOLID GREEN
             recordArmButton.setColour(juce::TextButton::buttonColourId,
                                       juce::Colours::green);
             break;
 
         case LoopTrack::State::Stopped:
-            // Orange when stopped but has loop
+            // Has loop but stopped - ORANGE
             recordArmButton.setColour(juce::TextButton::buttonColourId,
                                       juce::Colours::orange);
             break;
 
-        case LoopTrack::State::Empty:
         default:
-            // Grey when empty
             recordArmButton.setColour(juce::TextButton::buttonColourId,
                                       juce::Colours::grey);
             break;
-
     }
 }
 

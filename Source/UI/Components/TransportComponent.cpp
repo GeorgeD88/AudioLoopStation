@@ -23,9 +23,25 @@ void TransportComponent::setupButtons()
     recordButton.onClick = [this]()
     {
         DBG("[UI] GLOBAL RECORD");
-        // for now just toggle - could arm first track
-        if (audioProcessor) {
-            audioProcessor->requestTrackRecording(0);
+        if (!audioProcessor) return;
+
+        // Find the armed track
+        for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+            auto* track = audioProcessor->getLoopManager().getTrack(i);
+            if (track && track->isArmed()) {
+                audioProcessor->startRecordingOnArmedTrack();  // New method
+                return;
+            }
+        }
+
+        // If no track armed, find first empty track and arm+record it
+        for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+            auto* track = audioProcessor->getLoopManager().getTrack(i);
+            if (track && track->getState() == LoopTrack::State::Empty) {
+                audioProcessor->requestTrackRecording(static_cast<int>(i));  // Arm it
+                audioProcessor->startRecordingOnArmedTrack();  // Then start
+                return;
+            }
         }
     };
     addAndMakeVisible(recordButton);

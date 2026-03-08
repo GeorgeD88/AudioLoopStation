@@ -48,6 +48,7 @@ public:
     static size_t getNumTracks() noexcept { return TrackConfig::MAX_TRACKS; }
 
     // === Global transport controls ===
+    void startRecording(size_t trackIndex);
     void startAllPlayback();
     void stopAllPlayback();
     void clearAllTracks();

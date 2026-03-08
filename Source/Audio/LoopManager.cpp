@@ -126,6 +126,15 @@ const LoopTrack* LoopManager::getTrack(size_t trackIndex) const {
     return nullptr;
 }
 
+void LoopManager::startRecording(size_t trackIndex) {
+    if (trackIndex >= TrackConfig::MAX_TRACKS) return;
+
+    // Post a StartRecording command immediately
+    postCommand({ LoopCommandType::StartRecording, trackIndex, syncEngine.getGlobalSample() });
+
+    DBG("[LOOP] Start recording on track " << trackIndex);
+}
+
 void LoopManager::startAllPlayback() {
     for (auto& track : tracks) {
         if (track->hasLoop()) {
@@ -137,6 +146,10 @@ void LoopManager::startAllPlayback() {
 void LoopManager::stopAllPlayback() {
     for (auto& track : tracks) {
         track->stopPlayback();
+    }
+    // Clear any pending recording requests when stopping
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+        pendingRecordRequests[i] = false;
     }
 }
 
@@ -239,6 +252,24 @@ void LoopManager::processCommands() {
 
             case LoopCommandType::StopRecording:
                 track->stopRecording();
+
+                // Auto-advance to next track after first recording
+                if (track->hasLoop()) {
+                    // Un-arm current track
+                    track->armForRecording(false);
+
+                    size_t nextTrack = trackIdx + 1;
+                    if (nextTrack < TrackConfig::MAX_TRACKS) {
+                        if (auto* next = getTrack(nextTrack)) {
+                            next->armForRecording(true);
+                            DBG("[LOOP] Auto-advanced from Track " << trackIdx
+                            << "to Track " << nextTrack);
+                        }
+                    } else {
+                        // If last track is reached, stay on it
+                        DBG("[LOOP] Last track reached, staying on Track " << trackIdx);
+                    }
+                }
                 break;
 
             case LoopCommandType::ClearTrack:
@@ -278,12 +309,8 @@ void LoopManager::requestTrackRecording(size_t trackIndex)
     track->armForRecording(true);
 
     // Track 1 or no master loop? Start now
-    if (trackIndex == 0 || !syncEngine.hasMasterLoop()) {
-        postCommand({ LoopCommandType::StartRecording, trackIndex, syncEngine.getGlobalSample() });
-    } else {
-        // Just mark as pending - will start at next loop boundary
-        pendingRecordRequests[trackIndex] = true;
-    }
+    pendingRecordRequests[trackIndex] = true;
+    DBG("[LOOP] Track " << trackIndex << " armed and queued");
 }
 
 // Call this at the START of processBlock

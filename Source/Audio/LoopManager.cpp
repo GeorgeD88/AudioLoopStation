@@ -149,7 +149,27 @@ void LoopManager::stopAllPlayback() {
     }
     // Clear any pending recording requests when stopping
     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
-        pendingRecordRequests[i] = false;
+        pendingRecordRequests[i].store(false, std::memory_order_release);
+    }
+}
+
+void LoopManager::stopAllRecording() {
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+        auto* track = tracks[i].get();
+        if (!track) continue;
+
+        auto state = track->getState();
+
+        // Handle both Recording and Queued states
+        if (state == LoopTrack::State::Recording) {
+            postCommand({LoopCommandType::StopRecording,
+                         i,
+                         syncEngine.getGlobalSample()});
+        }
+        else if (state == LoopTrack::State::Queued) {
+            // Cancel queued recordings directly (or via command)
+            cancelTrackRecording(i);
+        }
     }
 }
 
@@ -243,12 +263,16 @@ void LoopManager::processCommands() {
                 track->armForRecording(true);
                 break;
 
-            case LoopCommandType::StartRecording:
+            case LoopCommandType::StartRecording: {
+                // Store loop length
+                int preRecordingLength = track->getLoopLengthSamples();
+
                 track->startRecording(cmd->scheduledSample);
                 // Special case for Track 1 setting master loop
-                if (trackIdx == 0 && track->hasLoop())
-                    syncEngine.setMasterLoopLength(track->getLoopLengthSamples());
+                if (trackIdx == 0 && preRecordingLength > 0)
+                    syncEngine.setMasterLoopLength(preRecordingLength);
                 break;
+            }
 
             case LoopCommandType::StopRecording:
                 track->stopRecording();
@@ -288,16 +312,14 @@ void LoopManager::cancelTrackRecording(size_t trackIndex) {
     if (trackIndex >= TrackConfig::MAX_TRACKS) return;
 
     // clear pending request if waiting
-    if (pendingRecordRequests[trackIndex]) {
-        pendingRecordRequests[trackIndex] = false;
-    }
+    pendingRecordRequests[trackIndex].store(false, std::memory_order_release);
 
     // Tell track to leave Qd state
     if (auto* track = getTrack(trackIndex)) {
         track->stopQueue();
     }
 
-    DBG("CANCEL_REC track=" << trackIndex);
+    DBG("[CANCEL_REC] track=" << trackIndex);
 }
 
 void LoopManager::requestTrackRecording(size_t trackIndex)
@@ -309,7 +331,7 @@ void LoopManager::requestTrackRecording(size_t trackIndex)
     track->armForRecording(true);
 
     // Track 1 or no master loop? Start now
-    pendingRecordRequests[trackIndex] = true;
+    pendingRecordRequests[trackIndex].store(true, std::memory_order_release);
     DBG("[LOOP] Track " << trackIndex << " armed and queued");
 }
 
@@ -326,7 +348,7 @@ void LoopManager::checkLoopBoundary(juce::int64 currentSample, int numSamples)
         for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
             if (pendingRecordRequests[i]) {
                 postCommand({ LoopCommandType::StartRecording, i, nextBoundary });
-                pendingRecordRequests[i] = false;
+                pendingRecordRequests[i].store(false, std::memory_order_release);
             }
         }
     }

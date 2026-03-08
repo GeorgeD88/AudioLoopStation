@@ -72,6 +72,8 @@ public:
     void startRecordingOnArmedTrack();
     void startPlayback();
     void stopPlayback();
+    void stopRecording();
+    void stopAll();
     bool isPlaying() const { return isPlaying_; }
     void requestTrackRecording(int trackIndex);
     void cancelTrackRecording(int trackIndex);

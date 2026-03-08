@@ -357,6 +357,16 @@ void AudioLoopStationAudioProcessor::stopPlayback()
     isPlaying_ = false;
 }
 
+void AudioLoopStationAudioProcessor::stopRecording() {
+    loopManager.stopAllRecording();
+}
+
+void AudioLoopStationAudioProcessor::stopAll() {
+    loopManager.stopAllRecording();
+    loopManager.stopAllRecording();
+    isPlaying_ = false;
+}
+
 void AudioLoopStationAudioProcessor::requestTrackRecording(int trackIndex) {
     if (trackIndex >= 0 && trackIndex < static_cast<int>(TrackConfig::MAX_TRACKS)) {
         loopManager.requestTrackRecording(static_cast<size_t>(trackIndex));

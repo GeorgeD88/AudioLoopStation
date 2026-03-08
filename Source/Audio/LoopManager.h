@@ -51,6 +51,7 @@ public:
     void startRecording(size_t trackIndex);
     void startAllPlayback();
     void stopAllPlayback();
+    void stopAllRecording();
     void clearAllTracks();
     void armAllTracks(bool armed);
 
@@ -89,7 +90,7 @@ private:
     SyncEngine& syncEngine;
     std::array<std::unique_ptr<LoopTrack>, TrackConfig::MAX_TRACKS> tracks;
     gin::LockFreeQueue<LoopCommand> commandQueue{ 32 };
-    std::array<bool, TrackConfig::MAX_TRACKS> pendingRecordRequests { false };
+    std::array<std::atomic<bool>, TrackConfig::MAX_TRACKS> pendingRecordRequests;
 
     // === Per-track output buffers ===
     std::array<std::unique_ptr<gin::ScratchBuffer>, TrackConfig::MAX_TRACKS> trackOutputs;

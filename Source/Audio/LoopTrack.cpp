@@ -90,6 +90,8 @@ void LoopTrack::setAudioBuffer(const juce::AudioSampleBuffer &newBuffer, double 
     player.setBuffer(newBuffer, sourceSampleRate);
     sampleRate = sourceSampleRate;
 
+    loopLengthSamples.store(newBuffer.getNumSamples());
+
     playerLoaded = true;
 
     DBG("Track " + juce::String(trackId) + ": Audio buffer set - " +

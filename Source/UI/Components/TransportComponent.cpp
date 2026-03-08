@@ -64,7 +64,8 @@ void TransportComponent::setupButtons()
     {
         DBG("[UI] STOP");
         if (audioProcessor) {
-            audioProcessor->stopPlayback();
+            // Stops playback and recording and sets isPlaying to false
+            audioProcessor->stopAll();
             updateButtonStates();
         }
     };

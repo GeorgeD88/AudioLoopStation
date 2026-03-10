@@ -12,6 +12,7 @@
 // - at least 3 features from:
 //   time stretch, pitch shift, loop trim, reverse, slip, pan
 
+#include <cmath>
 # pragma once
 
 namespace TrackConfig {

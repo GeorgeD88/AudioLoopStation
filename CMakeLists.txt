@@ -82,7 +82,7 @@ set(SourceFiles
 # Change these to your own preferences
 juce_add_plugin(${PROJECT_NAME}
         COMPANY_NAME CS461_F25
-        IS_SYNTH TRUE
+        IS_SYNTH FALSE
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE

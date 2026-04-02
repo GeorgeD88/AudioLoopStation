@@ -219,11 +219,25 @@ bool AudioLoopStationAudioProcessor::isBusesLayoutSupported (const BusesLayout& 
     juce::ignoreUnused (layouts);
     return true;
 #else
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-        && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    // MAIN OUTPUT: Must be stereo (you're mixing multiple tracks with pan)
+    // Mono output would lose all pan information!
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        return false;
+
+    // MAIN INPUT: Can be mono OR stereo (spec requires both)
+    // - Mono: User plugs one instrument into left input
+    // - Stereo: User plugs stereo source into both inputs
+    if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::mono()
+        && layouts.getMainInputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
 #if ! JucePlugin_IsSynth
+    // Allow mono input with stereo output (most common use case)
+    if (layouts.getMainInputChannelSet() == juce::AudioChannelSet::mono()
+        && layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo())
+        return true;
+
+    // For other configurations, input and output must match
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
 #endif

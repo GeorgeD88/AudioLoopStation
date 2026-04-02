@@ -353,30 +353,3 @@ void LoopManager::checkLoopBoundary(juce::int64 currentSample, int numSamples)
         }
     }
 }
-
-
-/** TODO: Ensure migration to MixerEngine or delete what is already immplemented there
-bool LoopManager::isTrackMuted(size_t index) const {
-    if (auto* track = getTrack(index))
-        return track->isMuted();
-    return false;
-}
-
-bool LoopManager::isTrackSoloed(size_t index) const {
-    if (auto* track = getTrack(index))
-        return track->isSoloed();
-    return false;
-}
-
-float LoopManager::getTrackVolume(size_t index) const {
-    if (auto* track = getTrack(index))
-        return track->getCurrentVolumeDb();
-    return 0.0f;
-}
-
-float LoopManager::getTrackPan(size_t index) const {
-    if (auto* track = getTrack(index))
-        return track->getCurrentPan();
-    return 0.0f;
-}
-*/

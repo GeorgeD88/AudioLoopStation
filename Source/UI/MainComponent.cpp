@@ -5,7 +5,7 @@ MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
     : audioProcessor(processor),
       waveformDisplay(processor.getFormatManager()),
       vuMeter([&proc = processor] { return proc.getOutputLevel(); }),
-      trackControlPanel(processor.getApvts())
+      trackControlPanel(processor)
 {
     addAndMakeVisible(waveformDisplay);
     addAndMakeVisible(vuMeter);

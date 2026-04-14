@@ -4,17 +4,22 @@
 #include "TrackStripComponent.h"
 #include "../../Utils/TrackConfig.h"
 
+class AudioLoopStationAudioProcessor;
+
 //==============================================================================
-class TrackControlPanel final : public juce::Component
+class TrackControlPanel final : public juce::Component,
+                                 private juce::Timer
 {
 public:
-    explicit TrackControlPanel(juce::AudioProcessorValueTreeState& apvts);
+    explicit TrackControlPanel(AudioLoopStationAudioProcessor& processor);
     ~TrackControlPanel() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
 
 private:
+    void timerCallback() override;
+
     std::array<std::unique_ptr<TrackStripComponent>, TrackConfig::MAX_TRACKS> trackStrips;
     juce::AudioProcessorValueTreeState& apvts;
 

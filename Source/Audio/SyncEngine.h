@@ -62,10 +62,32 @@ public:
         return static_cast<int>(getSamplesPerBeat() * beatsPerBar);
     }
 
+    void setMasterLoopLength(juce::int64 samples) {
+        masterLoopLengthSamples = samples;
+    }
+
+    bool hasMasterLoop() const {
+        return masterLoopLengthSamples > 0;
+    }
+
+    juce::int64 getLoopLengthSamples() const {
+        return masterLoopLengthSamples;
+    }
+
+    // Helper to get samples until next loop boundary
+    juce::int64 getSamplesUntilNextLoopBoundary() const
+    {
+        if (!hasMasterLoop()) return 0;
+        juce::int64 current = globalSample.load();
+        juce::int64 next = ((current / masterLoopLengthSamples) + 1) * masterLoopLengthSamples;
+        return next - current;
+    }
+
 private:
     std::atomic<juce::int64> globalSample { 0 };
     std::atomic<float> tempoBPM {TrackConfig::DEFAULT_BPM};         // 120.0f is the default BPM
     double sampleRate = 0.0;
+    juce::int64 masterLoopLengthSamples { 0 };
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyncEngine)

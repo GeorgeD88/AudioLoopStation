@@ -5,12 +5,15 @@ MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
     : audioProcessor(processor),
       waveformDisplay(processor.getFormatManager()),
       vuMeter([&proc = processor] { return proc.getOutputLevel(); }),
-      trackControlPanel(processor.getApvts())
+      trackControlPanel(processor, processor.getApvts())
 {
     addAndMakeVisible(waveformDisplay);
     addAndMakeVisible(vuMeter);
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);
+
+    // Connect transport to processor
+    transportComponent.setAudioProcessor(&audioProcessor);
 }
 
 void MainComponent::setWaveformFile(const juce::File& file)

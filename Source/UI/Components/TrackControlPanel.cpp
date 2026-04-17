@@ -1,12 +1,13 @@
 #include "TrackControlPanel.h"
 
 //==============================================================================
-TrackControlPanel::TrackControlPanel(juce::AudioProcessorValueTreeState& apvtsRef)
-    : apvts(apvtsRef)
+TrackControlPanel::TrackControlPanel(AudioLoopStationAudioProcessor& processor,
+                                     juce::AudioProcessorValueTreeState& apvtsRef)
+    : audioProcessor(processor), apvts(apvtsRef)
 {
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
     {
-        trackStrips[i] = std::make_unique<TrackStripComponent>(i, apvts);
+        trackStrips[i] = std::make_unique<TrackStripComponent>(i, audioProcessor, apvts);
         addAndMakeVisible(*trackStrips[i]);
     }
 }

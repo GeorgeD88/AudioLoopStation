@@ -76,13 +76,14 @@ set(SourceFiles
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h                                      # Old config file
         Source/Utils/Config.h                                           # Reconfigured config file
+        Source/Utils/DebugLogger.h
 
 )
 
 # Change these to your own preferences
 juce_add_plugin(${PROJECT_NAME}
         COMPANY_NAME CS461_F25
-        IS_SYNTH TRUE
+        IS_SYNTH FALSE
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE
@@ -131,8 +132,6 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         gin
         gin_dsp
-        gin_gui
-        gin_plugin
 )
 
 # tiny console test runner (separate from the plugin)
@@ -146,11 +145,9 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/MixerTests.cpp
         Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
-        Source/Tests/CircularBufferTests.cpp
         Source/Tests/LoopTrackTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
-        Source/Audio/CircularBuffer.cpp
         Source/Audio/LoopManager.cpp
         Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp

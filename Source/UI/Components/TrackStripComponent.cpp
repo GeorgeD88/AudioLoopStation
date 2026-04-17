@@ -14,14 +14,20 @@ juce::Colour TrackStripComponent::getTrackColour(int index)
 }
 
 //==============================================================================
-TrackStripComponent::TrackStripComponent(int trackIdx, juce::AudioProcessorValueTreeState& apvtsRef)
-    : trackIndex(trackIdx), apvts(apvtsRef)
+TrackStripComponent::TrackStripComponent(int trackIdx,
+                                         AudioLoopStationAudioProcessor& processor,
+                                         juce::AudioProcessorValueTreeState& apvtsRef)
+    : trackIndex(trackIdx),
+    audioProcessor(processor),
+    apvts(apvtsRef)
 {
     setupControls();
+    startTimerHz(30);
 }
 
 TrackStripComponent::~TrackStripComponent()
 {
+    stopTimer();
 }
 
 void TrackStripComponent::setupControls()
@@ -51,6 +57,20 @@ void TrackStripComponent::setupControls()
     recordArmButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
     recordArmButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
     recordArmButton.setClickingTogglesState(true);
+    // Connect and make arm button visible
+    recordArmButton.onClick = [this]()
+    {
+        bool newState = recordArmButton.getToggleState();
+        DBG("ARM CLICK: Track " + juce::String(trackIndex) + " = " + (newState ? "ON" : "OFF"));
+        if (recordArmButton.getToggleState())
+        {
+            DBG("[UI] ARM track=" << trackIndex);
+            audioProcessor.requestTrackRecording(trackIndex);
+        } else {
+            DBG("[UI] ARM release track=" << trackIndex);
+            audioProcessor.cancelTrackRecording(trackIndex);
+        }
+    };
     addAndMakeVisible(recordArmButton);
 
     muteButton.setButtonText("M");
@@ -67,6 +87,12 @@ void TrackStripComponent::setupControls()
 
     clearButton.setButtonText("CLEAR");
     clearButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    // Connect clear button
+    clearButton.onClick = [this]()
+    {
+        DBG("[UI] CLEAR track=" << trackIndex);
+        audioProcessor.clearTrack(trackIndex);
+    };
     addAndMakeVisible(clearButton);
 
     // APVTS attachments
@@ -94,6 +120,66 @@ void TrackStripComponent::paint(juce::Graphics& g)
     // Colored border
     g.setColour(colour.withAlpha(0.6f));
     g.drawRect(getLocalBounds(), 1);
+}
+
+void TrackStripComponent::timerCallback() {
+    auto* track = audioProcessor.getLoopManager().getTrack(static_cast<size_t>(trackIndex));
+    if (!track) return;
+
+    auto state = track->getState();
+    bool isArmed = track->isArmed();
+
+    // If not armed, show grey (not selected)
+    if (!isArmed) {
+        recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                  juce::Colours::grey);
+        return;
+    }
+
+    // Track is armed (selected) - now show its state
+    switch (state) {
+        case LoopTrack::State::Empty:
+            // Armed but empty - solid green (selected, ready to record)
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      juce::Colours::green);
+            break;
+
+        case LoopTrack::State::Queued:
+            // Count-in/waiting for quantized start - BLINKING YELLOW
+            // Faster blink for count-in (250ms)
+        {
+            auto now = juce::Time::getMillisecondCounter();
+            const int blinkInterval = 250; // milliseconds
+            bool shouldBeOn = (now / blinkInterval) % 2 == 0;
+
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      shouldBeOn ? juce::Colours::yellow : juce::Colours::darkgoldenrod);
+        }
+            break;
+
+        case LoopTrack::State::Recording:
+            // Recording - SOLID RED
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      juce::Colours::red);
+            break;
+
+        case LoopTrack::State::Playing:
+            // Playing - SOLID GREEN
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      juce::Colours::green);
+            break;
+
+        case LoopTrack::State::Stopped:
+            // Has loop but stopped - ORANGE
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      juce::Colours::orange);
+            break;
+
+        default:
+            recordArmButton.setColour(juce::TextButton::buttonColourId,
+                                      juce::Colours::grey);
+            break;
+    }
 }
 
 void TrackStripComponent::resized()

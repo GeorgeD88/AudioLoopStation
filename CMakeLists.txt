@@ -76,6 +76,7 @@ set(SourceFiles
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h                                      # Old config file
         Source/Utils/Config.h                                           # Reconfigured config file
+        Source/Utils/DebugLogger.h
 
 )
 
@@ -144,11 +145,9 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/MixerTests.cpp
         Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
-        Source/Tests/CircularBufferTests.cpp
         Source/Tests/LoopTrackTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
-        Source/Audio/CircularBuffer.cpp
         Source/Audio/LoopManager.cpp
         Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp

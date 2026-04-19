@@ -2,25 +2,35 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "../../Audio/LoopManager.h"
 
 //==============================================================================
-/** A single track's control strip - uses FlexBox for responsive layout */
+/** A single track's control strip - uses FlexBox for responsive layout.
+    Background/header colours reflect engine state: recording (red), muted (gray),
+    playing (green accent), stopped with loop (orange), armed (orange border). */
 class TrackStripComponent final : public juce::Component
 {
 public:
-    TrackStripComponent(int trackIndex, juce::AudioProcessorValueTreeState& apvts);
+    TrackStripComponent(int trackIndex,
+                        juce::AudioProcessorValueTreeState& apvts,
+                        LoopManager& loopManagerRef);
     ~TrackStripComponent() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
 
+    /** Keep ARM toggle aligned with LoopTrack (e.g. after armAllTracks from transport). */
+    void syncArmButtonWithEngine();
+
 private:
     static juce::Colour getTrackColour(int index);
+    juce::String trackParameterPrefix() const;
 
     void setupControls();
 
     int trackIndex;
     juce::AudioProcessorValueTreeState& apvts;
+    LoopManager& loopManager;
 
     juce::Label trackLabel;
     juce::Slider volumeSlider;

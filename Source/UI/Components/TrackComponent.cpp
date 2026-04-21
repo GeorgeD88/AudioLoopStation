@@ -99,7 +99,7 @@ void TrackComponent::paint(juce::Graphics& g)
             for (int i = 0; i < dBeats; ++i)
             {
                 juce::Rectangle<float> bl(visArea.getX() + i * bW, (float)visArea.getY(), bW - gp, (float)visArea.getHeight());
-                if (track.isMutedState())
+                if (!processor.getMixerEngine().isTrackAudible(static_cast<size_t>(trackID)))
                     g.setColour(Colours_::beatMuted);
                 else if (i == active && track.getState() == LoopTrack::State::Playing)
                     g.setColour(Colours_::beatActive);
@@ -192,9 +192,11 @@ void TrackComponent::updateButtonVisuals()
     }
     recPlayButton.setColour(juce::TextButton::buttonColourId, rc);
     recPlayButton.setButtonText(rt);
-    muteButton.setColour(juce::TextButton::buttonColourId, track.isMutedState() ? Colours_::mute : Colours_::idle);
-    soloButton.setColour(juce::TextButton::buttonColourId, track.getSolo() ? Colours_::solo : Colours_::idle);
-    soloButton.setColour(juce::TextButton::textColourOnId, track.getSolo() ? Colours_::bg : Colours_::textPrimary);
+    const bool muted = muteButton.getToggleState();
+    const bool soloed = soloButton.getToggleState();
+    muteButton.setColour(juce::TextButton::buttonColourId, muted ? Colours_::mute : Colours_::idle);
+    soloButton.setColour(juce::TextButton::buttonColourId, soloed ? Colours_::solo : Colours_::idle);
+    soloButton.setColour(juce::TextButton::textColourOnId, soloed ? Colours_::bg : Colours_::textPrimary);
     undoButton.setEnabled(track.canUndo());
     undoButton.setColour(juce::TextButton::buttonColourId, track.canUndo() ? Colours_::undo.brighter(0.2f) : Colours_::idle);
 

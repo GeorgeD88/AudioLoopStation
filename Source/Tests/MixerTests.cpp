@@ -419,6 +419,8 @@ public:
             mixer.process(inputs, out);
 
             expect(!mixer.getIsAnyTrackSoloed(), " No solo buttons are active, so global solo state should be false .");
+            expect(!mixer.isTrackAudible(0), "Muted track should be inaudible when no solo is active.");
+            expect(mixer.isTrackAudible(1), "Unmuted track should be audible when no solo is active.");
 
             expectWithinAbsoluteError(out.getSample(0, 0), 0.25f, 0.02f, "Only one unmuted track should contribute");
             expectWithinAbsoluteError(out.getSample(1, 0), 0.25f, 0.02f, "only one unmuted track should contribute.");
@@ -451,6 +453,8 @@ public:
             mixer.process(inputs, out);
 
             expect(mixer.getIsAnyTrackSoloed(), " Solo listener should raise global solo state. ");
+            expect(mixer.isTrackAudible(0), "Soloed track should be audible even if its mute flag is also set.");
+            expect(!mixer.isTrackAudible(1), "Non-soloed track should be inaudible while any solo is active.");
 
             expectWithinAbsoluteError(out.getSample(0, 0), 0.25f, 0.02f, "soloed track should pass while non-solo track is ignored");
             expectWithinAbsoluteError(out.getSample(1, 0), 0.25f, 0.02f, "Soloed track should pass while non-solo track is ignored");

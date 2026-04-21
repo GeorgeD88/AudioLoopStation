@@ -54,6 +54,7 @@ public:
 
     // Public Accessor for UI - returns vector of pointers
     std::vector<std::unique_ptr<LoopTrack>>& getTracks() { return mTracks; }
+    MixerEngine& getMixerEngine() { return mixerEngine; }
 
     // UI Accessors for State
     bool isFirstLoop() const { return mIsFirstLoop.load(); }

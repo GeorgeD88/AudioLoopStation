@@ -33,7 +33,7 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, const juce::AudioBuffer<float>& inputBuffer,
                       const juce::AudioBuffer<float>& sidechainBuffer,
-                      juce::int64 globalTotalSamples, bool isMasterTrack, int masterLoopLength, bool anySoloActive);
+                      juce::int64 globalTotalSamples, bool isMasterTrack, int masterLoopLength, bool shouldBeSilent);
 
     /** RESET: Clears the buffer and state. */
     void clear();
@@ -46,8 +46,6 @@ public:
     void stop();
 
     void setVolume(float newVolume) { gain.store(newVolume); }
-    void setMuted(bool shouldBeMuted) { isMuted.store(shouldBeMuted); }
-    void setSolo(bool shouldBeSolo) { isSolo.store(shouldBeSolo); }
     // FX Replace: one-shot apply of captured sidechain audio
     void applyFxReplace();
     bool isFxCaptureReady() const { return loopLengthSamples > 0 && fxCaptureSamplesWritten >= loopLengthSamples; }
@@ -64,8 +62,6 @@ public:
     State getState() const { return currentState.load(); }
     bool hasLoop() const { return loopLengthSamples > 0; }
     int getLoopLengthSamples() const { return loopLengthSamples; }
-    bool getSolo() const { return isSolo.load(); }
-    bool isMutedState() const { return isMuted.load(); }
 
     // Buffer access (for bounce back / after loop)
     const juce::AudioBuffer<float>& getLoopBuffer() const { return loopBuffer; }
@@ -111,8 +107,6 @@ private:
     // Playback/Recording Logic
     std::atomic<State> currentState { State::Empty };
     std::atomic<float> gain { 1.0f };
-    std::atomic<bool> isMuted { false };
-    std::atomic<bool> isSolo { false };                     // New Solo state
 
     int playbackPosition = 0;                               // Current read/write head position
     int loopLengthSamples = 0;                              // Defined after first recording finishes

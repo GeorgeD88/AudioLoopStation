@@ -339,17 +339,6 @@ void AudioLoopStationAudioProcessor::processBlock(juce::AudioBuffer<float>& buff
     bool isFirstLoopPhase = mIsFirstLoop.load();
     juce::int64 currentGlobalTotal = mGlobalTotalSamples.load();
 
-    // Check for Global Solo
-    bool anySolo = false;
-    for (auto& t : mTracks)
-    {
-        if (t->getSolo())
-        {
-            anySolo = true;
-            break;
-        }
-    }
-
     for (size_t i = 0; i < mTracks.size(); ++i)
     {
         bool isMaster = (i == 0);
@@ -379,7 +368,8 @@ void AudioLoopStationAudioProcessor::processBlock(juce::AudioBuffer<float>& buff
         auto busBuffer = getBusBuffer(buffer, false, targetBus);
 
         auto& fxCache = (i < NUM_TRACKS) ? mFxReturnCache[i] : mFxReturnCache[0];
-        mTracks[i]->processBlock(busBuffer, mInputCache, fxCache, currentGlobalTotal, isMaster, masterLength, anySolo);
+        const bool shouldBeSilent = !mixerEngine.isTrackAudible(i);
+        mTracks[i]->processBlock(busBuffer, mInputCache, fxCache, currentGlobalTotal, isMaster, masterLength, shouldBeSilent);
     }
 
     // 4. Update Global Transport (Playback & Synchronization)
@@ -584,14 +574,6 @@ void AudioLoopStationAudioProcessor::handleParameterChanges()
         // Volume (continuous, driven by SliderAttachment)
         float volVal = mParamVol[i]->load();
         mTracks[i]->setVolume(volVal);
-
-        // Mute (direct sync, driven by ButtonAttachment toggle)
-        bool muVal = mParamMute[i]->load() >= 0.5f;
-        mTracks[i]->setMuted(muVal);
-
-        // Solo (direct sync, driven by ButtonAttachment toggle)
-        bool soVal = mParamSolo[i]->load() >= 0.5f;
-        mTracks[i]->setSolo(soVal);
 
         // FX Replace trigger (any edge)
         bool rsmpVal = mParamResample[i]->load() >= 0.5f;

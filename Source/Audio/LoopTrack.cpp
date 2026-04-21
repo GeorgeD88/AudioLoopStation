@@ -51,7 +51,7 @@ void LoopTrack::prepareToPlay(double sampleRate, int /*samplesPerBlock*/) {
  */
 void LoopTrack::processBlock(juce::AudioBuffer<float>& outputBuffer, const juce::AudioBuffer<float>& inputBuffer,
                              const juce::AudioBuffer<float>& sidechainBuffer,
-                             juce::int64 globalTotalSamples, bool isMasterTrack, int masterLoopLength, bool anySoloActive)
+                             juce::int64 globalTotalSamples, bool isMasterTrack, int masterLoopLength, bool shouldBeSilent)
 {
     const int numSamples = outputBuffer.getNumSamples();
     State state = currentState.load();
@@ -61,20 +61,6 @@ void LoopTrack::processBlock(juce::AudioBuffer<float>& outputBuffer, const juce:
     if (state == State::Stopped || (state == State::Empty && state != State::Recording))
     {
         return;
-    }
-
-    // Check Solo/Mute logic
-    // If ANY solo is active, we are muted UNLESS we are soloed.
-    // If NO solo is active, we respect our local mute.
-    bool shouldBeSilent = false;
-
-    if (anySoloActive)
-    {
-        if (!isSolo.load()) shouldBeSilent = true;
-    }
-    else
-    {
-        if (isMuted.load()) shouldBeSilent = true;
     }
 
     // Auto-finish Fixed Length Recording (Slave Tracks)
@@ -95,9 +81,9 @@ void LoopTrack::processBlock(juce::AudioBuffer<float>& outputBuffer, const juce:
             loopLengthSamples = targetLen;
 
             LOG("SLAVE REC FINISHED | recorded=" + juce::String(recordedSamplesCurrent) +
-                " loopLen=" juce::String(loopLengthSamples) +
+                " loopLen=" + juce::String(loopLengthSamples) +
                 " multiplier=" + juce::String(multiplier) +
-                " offset=" + juce::juce::String(recordingStartOffset));
+                " offset=" + juce::String(recordingStartOffset));
 
             setPlaying();
             state = State::Playing;
@@ -187,14 +173,6 @@ void LoopTrack::processBlock(juce::AudioBuffer<float>& outputBuffer, const juce:
         }
     }
 
-    if (anySoloActive)
-    {
-        if (!isSolo.load()) shouldBeSilent = true;
-    }
-    else
-    {
-        if (isMuted.load()) shouldBeSilent = true;
-    }
     // Apply any pending progressive buffer replacement (playhead-first)
     if (mReplace.active) processReplaceChunk(readPos, numSamples);
 
@@ -544,9 +522,6 @@ void LoopTrack::handlePlayback(juce::AudioBuffer<float>& outputBuffer, int numSa
     if (shouldBeSilent)
         return;
 
-    if (isMuted.load())
-        return;
-
     float currentGain = gain.load();
 
     // During progressive replace, read from the source buffer (complete correct audio)
@@ -642,7 +617,7 @@ void LoopTrack::handleOverdub(juce::AudioBuffer<float>& outputBuffer, const juce
     // Overdub = Playback existing + Write new input on top
 
     // Cache atomic values
-    bool muted = isMuted.load();
+    bool muted = false;
     float currentGain = gain.load();
 
     // During progressive replace, read from the source buffer

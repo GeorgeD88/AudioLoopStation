@@ -42,7 +42,6 @@ set(SourceFiles
         Source/Audio/MixerEngine.cpp                                    # The mixing console and master section - controls gain and levels
         Source/Audio/MixerEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
-        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp

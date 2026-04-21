@@ -76,6 +76,7 @@ set(SourceFiles
         # Utiities - helpers, configs, and constants in /Utils
         Source/Utils/TrackConfig.h                                      # Old config file
         Source/Utils/Config.h                                           # Reconfigured config file
+        Source/Utils/DebugLogger.h
 
 )
 
@@ -144,6 +145,7 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/MixerTests.cpp
         Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
+        Source/Tests/LoopTrackTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
         Source/Audio/LoopManager.cpp
@@ -152,6 +154,21 @@ target_sources(AudioLoopStation_Tests
         Source/Audio/LoopTrack.h
         Source/Audio/SyncEngine.h
         Source/Utils/TrackConfig.h
+)
+
+# Add include paths for Audio headers
+target_include_directories(AudioLoopStation_Tests
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/gin/modules
+)
+
+# Disable GUI for tests
+target_compile_definitions(AudioLoopStation_Tests
+        PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_DISABLE_NATIVE_FILECHOOSERS=1
 )
 
 target_link_libraries(AudioLoopStation_Tests

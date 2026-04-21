@@ -126,23 +126,208 @@ bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &
 
 bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManager &loopManager,
                                   const SyncEngine &syncEngine) {
-    // Avoid unused parameter warnings while this is a TODO
-    juce::ignoreUnused(destination, loopManager, syncEngine);
+    juce::FileOutputStream stream(destination);
+    if (!stream.openedOk()) {
+        DBG("Save Project: Failed to open file for writing");
+        return false;
+    }
 
-    // TODO: Save project state
-    DBG("Save Project: Not yet implemented");
+    AlsFormat::Header header;
+    AlsFormat::initHeader(header);
 
+    double projectSampleRate = syncEngine.getSampleRate();
+    if (projectSampleRate <= 0) projectSampleRate = static_cast<double>(TrackConfig::DEFAULT_SAMPLE_RATE);
+    header.sampleRate = static_cast<uint32_t>(projectSampleRate);
+    header.numChannels = TrackConfig::STEREO_MODE ? 2 : 1;
+    header.numTracks = static_cast<uint16_t>(TrackConfig::MAX_TRACKS);
+
+    // Build JSON metadata
+    juce::DynamicObject::Ptr root = new juce::DynamicObject();
+    root->setProperty("version", static_cast<int>(AlsFormat::VERSION));
+    root->setProperty("bpm", syncEngine.getTempo());
+    root->setProperty("sampleRate", static_cast<int>(header.sampleRate));
+    root->setProperty("numTracks", static_cast<int>(header.numTracks));
+
+    juce::Array<juce::var> tracksArray;
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+        const LoopTrack* track = loopManager.getTrack(i);
+        if (!track) continue;
+
+        juce::DynamicObject::Ptr t = new juce::DynamicObject();
+        t->setProperty("index", static_cast<int>(i));
+        t->setProperty("volumeDb", track->getCurrentVolumeDb());
+        t->setProperty("pan", track->getCurrentPan());
+        t->setProperty("mute", track->isMuted());
+        t->setProperty("solo", track->isSoloed());
+        t->setProperty("reverse", track->isReversed());
+        t->setProperty("slipOffset", track->getSlipOffset());
+        t->setProperty("loopLengthSamples", track->getLoopLengthSamples());
+        t->setProperty("hasAudio", track->hasAudio());
+        double sr = track->getSourceSampleRate();
+        t->setProperty("sourceSampleRate", sr > 0 ? sr : projectSampleRate);
+        tracksArray.add(juce::var(t.get()));
+    }
+    root->setProperty("tracks", tracksArray);
+
+    juce::var jsonVar(root.get());
+    juce::String jsonStr = juce::JSON::toString(jsonVar);
+    size_t jsonBytes = jsonStr.getNumBytesAsUTF8();
+    juce::MemoryBlock jsonBlock(jsonStr.toRawUTF8(), jsonBytes);
+    header.jsonLength = jsonBlock.getSize();
+
+    // Write binary audio to memory first so we know the length
+    juce::MemoryBlock audioBlock;
+    juce::MemoryOutputStream audioStream(audioBlock, true);
+
+    int tracksWithAudio = 0;
+    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+        const LoopTrack* track = loopManager.getTrack(i);
+        if (!track || !track->hasAudio()) continue;
+
+        const auto& buf = track->getAudioBuffer();
+        int numSamples = buf.getNumSamples();
+        int numChannels = buf.getNumChannels();
+
+        audioStream.writeInt(numSamples);
+        audioStream.writeInt(numChannels);
+        for (int ch = 0; ch < numChannels; ++ch) {
+            audioStream.write(buf.getReadPointer(ch),
+                              static_cast<size_t>(numSamples) * sizeof(float));
+        }
+        ++tracksWithAudio;
+    }
+    header.audioLength = audioBlock.getSize();
+
+    // Write header
+    if (!stream.write(static_cast<const void*>(&header), AlsFormat::HEADER_SIZE)) {
+        DBG("Save Project: Failed to write header");
+        return false;
+    }
+    // Write JSON
+    if (!stream.write(jsonBlock.getData(), static_cast<size_t>(header.jsonLength))) {
+        DBG("Save Project: Failed to write JSON");
+        return false;
+    }
+    // Write binary audio
+    if (header.audioLength > 0 && !stream.write(audioBlock.getData(), static_cast<size_t>(header.audioLength))) {
+        DBG("Save Project: Failed to write audio data");
+        return false;
+    }
+
+    DBG("Save Project: Saved " + juce::String(tracksWithAudio) + " tracks to " + destination.getFileName());
     return true;
 }
 
 bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopManager, SyncEngine &syncEngine) {
+    if (!source.existsAsFile()) {
+        DBG("Load Project: File does not exist");
+        return false;
+    }
 
-    // Avoid unused parameter warnings while this is a TODO
-    juce::ignoreUnused(source, loopManager, syncEngine);
+    juce::FileInputStream stream(source);
+    if (!stream.openedOk()) {
+        DBG("Load Project: Failed to open file");
+        return false;
+    }
 
-    // TODO: Handle loading full projects
-    DBG("Load Project: Not yet implemented");
+    AlsFormat::Header header;
+    if (stream.read(&header, AlsFormat::HEADER_SIZE) != static_cast<int64_t>(AlsFormat::HEADER_SIZE)) {
+        DBG("Load Project: Failed to read header");
+        return false;
+    }
 
+    if (header.magic != AlsFormat::MAGIC) {
+        DBG("Load Project: Invalid magic (not an .als file)");
+        return false;
+    }
+    if (header.version > AlsFormat::VERSION) {
+        DBG("Load Project: Unsupported format version " + juce::String(header.version));
+        return false;
+    }
+
+    // Read JSON
+    juce::MemoryBlock jsonBlock(header.jsonLength);
+    if (stream.read(jsonBlock.getData(), static_cast<size_t>(header.jsonLength)) != static_cast<int64_t>(header.jsonLength)) {
+        DBG("Load Project: Failed to read JSON");
+        return false;
+    }
+
+    juce::var jsonVar = juce::JSON::parse(juce::String::fromUTF8(
+        static_cast<const char*>(jsonBlock.getData()),
+        static_cast<size_t>(header.jsonLength)));
+    if (!jsonVar.isObject()) {
+        DBG("Load Project: Invalid JSON metadata");
+        return false;
+    }
+
+    // Apply global settings
+    juce::var bpmVar = jsonVar.getProperty("bpm", TrackConfig::DEFAULT_BPM);
+    if (bpmVar.isDouble() || bpmVar.isInt())
+        syncEngine.setTempo(static_cast<float>(static_cast<double>(bpmVar)));
+
+    // Stop and clear all tracks before loading
+    loopManager.stopAllPlayback();
+    loopManager.clearAllTracks();
+
+    double projectSampleRate = header.sampleRate > 0
+        ? static_cast<double>(header.sampleRate)
+        : static_cast<double>(TrackConfig::DEFAULT_SAMPLE_RATE);
+
+    // Apply per-track metadata and load audio
+    juce::var tracksVar = jsonVar.getProperty("tracks", juce::var());
+    if (!tracksVar.isArray()) {
+        DBG("Load Project: No tracks array in JSON");
+        return true; // Empty project is valid
+    }
+
+    juce::Array<juce::var>* tracksArray = tracksVar.getArray();
+    int numTracksWithAudio = 0;
+    for (const auto& tVar : *tracksArray) {
+        if (!tVar.isObject()) continue;
+
+        int index = static_cast<int>(tVar.getProperty("index", 0));
+        if (index < 0 || index >= TrackConfig::MAX_TRACKS) continue;
+
+        LoopTrack* track = loopManager.getTrack(static_cast<size_t>(index));
+        if (!track) continue;
+
+        // Apply DSP parameters
+        track->setVolumeDb(static_cast<float>(static_cast<double>(tVar.getProperty("volumeDb", TrackConfig::DEFAULT_VOLUME_DB))));
+        track->setPan(static_cast<float>(static_cast<double>(tVar.getProperty("pan", TrackConfig::DEFAULT_PAN))));
+        track->setMute(static_cast<bool>(tVar.getProperty("mute", false)));
+        track->setSolo(static_cast<bool>(tVar.getProperty("solo", false)));
+        track->setReverse(static_cast<bool>(tVar.getProperty("reverse", false)));
+        track->setSlip(static_cast<int>(tVar.getProperty("slipOffset", 0)));
+
+        bool hasAudio = static_cast<bool>(tVar.getProperty("hasAudio", false));
+        if (!hasAudio) continue;
+
+        // Read next audio block from binary section
+        int numSamples = stream.readInt();
+        int numChannels = stream.readInt();
+        if (numSamples <= 0 || numChannels <= 0 || numChannels > 2) {
+            DBG("Load Project: Invalid audio block for track " + juce::String(index));
+            continue;
+        }
+
+        juce::AudioBuffer<float> buffer(numChannels, numSamples);
+        for (int ch = 0; ch < numChannels; ++ch) {
+            if (stream.read(buffer.getWritePointer(ch), static_cast<size_t>(numSamples) * sizeof(float))
+                != static_cast<int64_t>(numSamples) * static_cast<int64_t>(sizeof(float))) {
+                DBG("Load Project: Failed to read audio for track " + juce::String(index));
+                break;
+            }
+        }
+
+        double trackSr = projectSampleRate;
+        if (tVar.hasProperty("sourceSampleRate")) {
+            trackSr = static_cast<double>(tVar.getProperty("sourceSampleRate", projectSampleRate));
+        }
+        track->setAudioBuffer(buffer, trackSr);
+        ++numTracksWithAudio;
+    }
+
+    DBG("Load Project: Loaded " + juce::String(numTracksWithAudio) + " tracks from " + source.getFileName());
     return true;
 }
 

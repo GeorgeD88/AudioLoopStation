@@ -4,18 +4,18 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
-#include "gin/gin.h"
-#include "Audio/SyncEngine.h"
-#include "Audio/LoopManager.h"
 #include "Audio/MixerEngine.h"
 #include "Audio/LoopFileHandler.h"
 #include "Utils/TrackConfig.h"
+#include "Audio/LoopTrack.h"
+#include "Utils/DebugLogger.h"
 
 //==============================================================================
-class AudioLoopStationAudioProcessor final : public juce::AudioProcessor,
-                                             public juce::AudioProcessorValueTreeState::Listener
+class AudioLoopStationAudioProcessor : public juce::AudioProcessor
 {
 public:
+    static constexpr int NUM_TRACKS = 6;
+    std::atomic<bool> mIsRecording{ false };
     //==============================================================================
     AudioLoopStationAudioProcessor();
     ~AudioLoopStationAudioProcessor() override;
@@ -24,10 +24,11 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
+#ifndef JucePlugin_PreferredChannelConfigurations
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+#endif
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-    using AudioProcessor::processBlock;
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -35,6 +36,7 @@ public:
 
     //==============================================================================
     const juce::String getName() const override;
+
     bool acceptsMidi() const override;
     bool producesMidi() const override;
     bool isMidiEffect() const override;
@@ -51,57 +53,102 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    // === Listener callback ===
-    void parameterChanged(const juce::String& parameterID, float newValue) override;
+    // Public Accessor for UI - returns vector of pointers
+    std::vector<std::unique_ptr<LoopTrack>>& getTracks() { return mTracks; }
 
-    juce::AudioFormatManager& getFormatManager() { return formatManager; }
+    // UI Accessors for State
+    bool isFirstLoop() const { return mIsFirstLoop.load(); }
+    double getBpm() const { return mBpm.load(); }
+    int getPrimaryLoopLength() const { return mPrimaryLoopLengthSamples.load(); }
+    int getGlobalPlaybackPosition() const { return mGlobalPlaybackPosition; }
+    juce::int64 getGlobalTotalSamples() const { return mGlobalTotalSamples.load(); }
 
-    /** Get current output level (0-1) for VU metering. Updated each processBlock. */
-    float getOutputLevel() const { return outputLevel.load(std::memory_order_relaxed); }
+    // Commands
+    void resetAll();
+    void bounceBack();
+    void captureAfterLoop(int trackIndex);
 
-    // APVTS access
-    juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
-
-    // === Getters for UI ===
-    LoopManager& getLoopManager() { return loopManager; }
-    SyncEngine& getSyncEngine() { return syncEngine; }
-
-    // === Transport control methods ===
-    void loadFileToTrack(const juce::File& audioFile, int trackIndex);
-    void startRecording(int trackIndex);
-    void startRecordingOnArmedTrack();
-    void startPlayback();
-    void stopPlayback();
-    void stopRecording();
-    void stopAll();
-    bool isPlaying() const { return isPlaying_; }
-    void requestTrackRecording(int trackIndex);
-    void cancelTrackRecording(int trackIndex);
-    void clearTrack(int trackIndex);
+    // APVTS for DAW parameter automation / MIDI mapping (Ableton Configure)
+    juce::AudioProcessorValueTreeState apvts;
 
 private:
-    // === Core components ===
-    SyncEngine syncEngine;                          // 1. Global timekeeper
-    LoopManager loopManager;                        // 2. Manages tracks, uses the SyncEngine
-    MixerEngine mixerEngine;                        // 3. Mixes tracks
-    std::unique_ptr<LoopFileHandler> fileHandler;   // 4. File loading
+    //==============================================================================
+    // --- LOOP TRACKS ---
+    MixerEngine mixerEngine;
 
-    std::atomic<float> outputLevel{0.0f};
+    // Sync State
+    std::atomic<bool> mIsFirstLoop { true };
+    std::atomic<double> mBpm { 120.0 };
+    std::atomic<int> mPrimaryLoopLengthSamples { 0 };
+    int mGlobalPlaybackPosition = 0;
+    std::atomic<juce::int64> mGlobalTotalSamples { 0 };
 
-    // APVTS for track parameters
-    juce::AudioProcessorValueTreeState apvts;
-    juce::AudioFormatManager formatManager;
+    void calculateBpm(int lengthSamples, double sampleRate);
 
-    // === Audio Playback Logic ==
-    std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
-    juce::AudioTransportSource transportSource;
+    // Must use unique_ptr because LoopTrack contains atomics (non-copyable/non-movable)
+    std::vector<std::unique_ptr<LoopTrack>> mTracks;
 
-    // === State ===
-    std::atomic<bool> isPlaying_ {false};
+    // Temporary buffer to hold input audio while tracks process and write to output
+    juce::AudioBuffer<float> mInputCache;
+    // Per-track FX return capture buffers (one per input bus)
+    juce::AudioBuffer<float> mFxReturnCache[NUM_TRACKS];
 
-    // === Parameter layout creation ===
+    // --- Parameter system (DAW / MIDI mapping) ---
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void handleParameterChanges();
+    void resetAllInternal();
+    void performBounceBack();
+    void performCaptureAfterLoop(int trackIndex);
 
+    // Cached parameter pointers (valid for APVTS lifetime)
+    std::atomic<float>* mParamVol[NUM_TRACKS] = {};
+    std::atomic<float>* mParamRecPlay[NUM_TRACKS] = {};
+    std::atomic<float>* mParamStop[NUM_TRACKS] = {};
+    std::atomic<float>* mParamMute[NUM_TRACKS] = {};
+    std::atomic<float>* mParamSolo[NUM_TRACKS] = {};
+    std::atomic<float>* mParamAfterLoop[NUM_TRACKS] = {};
+    std::atomic<float>* mParamClear[NUM_TRACKS] = {};
+    std::atomic<float>* mParamUndo[NUM_TRACKS] = {};
+    std::atomic<float>* mParamMul[NUM_TRACKS] = {};
+    std::atomic<float>* mParamDiv[NUM_TRACKS] = {};
+    std::atomic<float>* mParamOutSelect[NUM_TRACKS] = {};
+    std::atomic<float>* mParamResample[NUM_TRACKS] = {};
+    std::atomic<float>* mParamBounce = nullptr;
+    std::atomic<float>* mParamReset = nullptr;
+    std::atomic<float>* mParamMidiSyncChannel = nullptr;
+
+    // Previous param states for edge detection
+    bool mPrevRecPlay[NUM_TRACKS] = {};
+    bool mPrevStop[NUM_TRACKS] = {};
+    bool mPrevAfterLoop[NUM_TRACKS] = {};
+    bool mPrevClear[NUM_TRACKS] = {};
+    bool mPrevUndo[NUM_TRACKS] = {};
+    bool mPrevMul[NUM_TRACKS] = {};
+    bool mPrevDiv[NUM_TRACKS] = {};
+    bool mPrevResample[NUM_TRACKS] = {};
+    bool mPrevBounce = false;
+    bool mPrevReset = false;
+
+    // --- Retrospective buffer (After Loop) ---
+    juce::AudioBuffer<float> mRetrospectiveBuffer;
+    int mRetroWritePos = 0;
+    int mRetroBufferSize = 0;
+
+    // Pre-allocated work buffer for bounce/afterloop operations
+    juce::AudioBuffer<float> mWorkBuffer;
+
+    // --- Deferred heavy operations (avoid audio thread overload) ---
+    static constexpr int CROSSFADE_SAMPLES = 128;
+    std::atomic<bool> mPendingBounce { false };
+    std::atomic<int>  mPendingAfterLoop { -1 }; // track index, -1 = none
+    void executePendingOperations();
+
+    // --- MIDI Clock output (24 PPQN) ---
+    double mMidiClockAccumulator = 0.0; // fractional sample position for next tick
+    bool mMidiClockRunning = false;
+    int mMidiPulseNote = 36; // C1
+
+    // ---------------------------
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationAudioProcessor)
 };

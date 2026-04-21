@@ -1,17 +1,16 @@
 //
-// Created by Vincewa Tran on 3/26/26.
+// Created by Vincewa Tran on 4/14/26.
 //
 
 #pragma once
 
+#include "juce_core/juce_core.h"
 #include <fstream>
 #include <sstream>
 #include <memory>
-#include "juce_audio_basics/juce_audio_basics.h"
-#include "juce_audio_processors/juce_audio_processors.h"
 
-// ACTIVATE/DISABLE the Logger
-#define ENABLE_DEBUG_LOGGER 0  // 1 = active, 0 = inactive (Turn off to prevent crashes)
+// ENABLE/DISABLE LOGGER
+#define ENABLE_DEBUG_LOGGER 0  // 1 = enabled, 0 = disabled (DISABLED to avoid crashes)
 
 #if ENABLE_DEBUG_LOGGER
 
@@ -28,7 +27,7 @@ public:
         return instance;
     }
 
-    // Log un �v�nement simple
+    // Log a simple event
     void log(const juce::String& message)
     {
         if (!isEnabled) return;
@@ -44,14 +43,14 @@ public:
         if (logFile.is_open())
         {
             logFile << fullMessage.toStdString() << std::endl;
-            logFile.flush(); // Force write imm�diatement
+            logFile.flush(); // Force immediate write
         }
 
-        // Aussi dans la console pour debug temps r�el
+        // Also in console for real-time debug
         DBG(fullMessage);
     }
 
-    // Log un �v�nement avec track ID
+    // Log an event with track ID
     void logTrack(int trackID, const juce::String& event, const juce::String& details = "")
     {
         juce::String msg = "TRACK " + juce::String(trackID) + ": " + event;
@@ -60,13 +59,13 @@ public:
         log(msg);
     }
 
-    // Log un changement d'�tat
+    // Log a state change
     void logStateChange(int trackID, const juce::String& oldState, const juce::String& newState)
     {
         logTrack(trackID, "STATE CHANGE", oldState + " -> " + newState);
     }
 
-    // Log les positions et longueurs
+    // Log positions and lengths
     void logPosition(int trackID, int position, int loopLength, int globalPos = -1)
     {
         juce::String details = "pos=" + juce::String(position) +
@@ -76,7 +75,7 @@ public:
         logTrack(trackID, "POSITION", details);
     }
 
-    // Log les actions utilisateur (boutons)
+    // Log user actions (buttons)
     void logButton(const juce::String& buttonName, int trackID = -1)
     {
         juce::String msg = "BUTTON: " + buttonName;
@@ -85,13 +84,13 @@ public:
         log(msg);
     }
 
-    // Log les valeurs importantes
+    // Log important values
     void logValue(const juce::String& name, double value)
     {
         log("VALUE: " + name + " = " + juce::String(value, 3));
     }
 
-    // Log une erreur ou warning
+    // Log an error or warning
     void logError(const juce::String& error)
     {
         log("*** ERROR: " + error);
@@ -102,7 +101,7 @@ public:
         log("!!! WARNING: " + warning);
     }
 
-    // S�parateurs pour lisibilit�
+    // Separators for readability
     void logSeparator(const juce::String& title = "")
     {
         if (title.isEmpty())
@@ -111,18 +110,18 @@ public:
             log("======== " + title + " ========");
     }
 
-    // Activer/d�sactiver le logging
+    // Enable/disable logging
     void setEnabled(bool enabled) { isEnabled = enabled; }
     bool getEnabled() const { return isEnabled; }
 
-    // Initialiser explicitement le logger (� appeler apr�s l'initialisation de JUCE)
+    // Explicitly initialize the logger (to be called after JUCE initialization)
     void initialize()
     {
         if (isInitialized) return;
 
         try
         {
-            // Cr�er le fichier de log dans le dossier Documents
+            // Create the log file in the Documents folder
             auto documentsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
             auto logFileObj = documentsDir.getChildFile("SimpleLooper_Debug.log");
             logFilePath = logFileObj.getFullPathName();
@@ -143,7 +142,7 @@ public:
         }
     }
 
-    // Fermer et rouvrir le fichier (utile pour vider le buffer)
+    // Close and reopen the file (useful to flush the buffer)
     void flush()
     {
         const juce::ScopedLock lock(logLock);
@@ -151,7 +150,7 @@ public:
             logFile.flush();
     }
 
-    // Clear le fichier log
+    // Clear the log file
     void clearLog()
     {
         const juce::ScopedLock lock(logLock);
@@ -164,38 +163,37 @@ public:
     }
 
 private:
-DebugLogger()
-{
-    // Ne pas initialiser ici - attendre l'appel explicite � initialize()
-    // pour �viter les probl�mes avec l'ordre d'initialisation
-}
-
-~DebugLogger()
-{
-    if (logFile.is_open())
+    DebugLogger()
     {
-        try
-        {
-            log("=== SESSION END ===");
-        }
-        catch (...) {}
-        logFile.close();
+        // Do not initialize here - wait for explicit call to initialize()
+        // to avoid issues with initialization order.
     }
-}
 
+    ~DebugLogger()
+    {
+        if (logFile.is_open())
+        {
+            try
+            {
+                log("=== SESSION END ===");
+            }
+            catch (...) {}
+            logFile.close();
+        }
+    }
 
-// Pas de copie
-DebugLogger(const DebugLogger&) = delete;
-DebugLogger& operator=(const DebugLogger&) = delete;
+    // No copy
+    DebugLogger(const DebugLogger&) = delete;
+    DebugLogger& operator=(const DebugLogger&) = delete;
 
-std::ofstream logFile;
-juce::String logFilePath;
-juce::CriticalSection logLock;
-bool isEnabled = true;
-bool isInitialized = false;
+    std::ofstream logFile;
+    juce::String logFilePath;
+    juce::CriticalSection logLock;
+    bool isEnabled = true;
+    bool isInitialized = false;
 };
 
-// Macros pratiques pour logger
+// Convenience macros for logging
 #define LOG(msg) DebugLogger::getInstance().log(msg)
 #define LOG_TRACK(trackID, event, details) DebugLogger::getInstance().logTrack(trackID, event, details)
 #define LOG_STATE(trackID, old, new) DebugLogger::getInstance().logStateChange(trackID, old, new)
@@ -208,7 +206,7 @@ bool isInitialized = false;
 
 #else
 
-// Logger disabled - Empty macros that do nothing
+// Logger disabled - empty macros that do nothing
 #define LOG(msg) ((void)0)
 #define LOG_TRACK(trackID, event, details) ((void)0)
 #define LOG_STATE(trackID, old, new) ((void)0)
@@ -219,7 +217,7 @@ bool isInitialized = false;
 #define LOG_WARNING(msg) ((void)0)
 #define LOG_SEP(title) ((void)0)
 
-// Empty classes to prevent compilation errors
+// Empty class to avoid compilation errors
 class DebugLogger
 {
 public:

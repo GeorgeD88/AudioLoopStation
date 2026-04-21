@@ -62,6 +62,17 @@ static void fillBuffer(juce::AudioBuffer<float>& buffer, float value)
     }
 }
 
+static void setTrackMuteSolo(juce::AudioProcessorValueTreeState& apvts, int track, bool mute, bool solo)
+{
+    const auto prefix = "Track" + juce::String(track + 1) + "_";
+
+    if (auto* muteParam = apvts.getParameter(prefix + "Mute"))
+        muteParam->setValueNotifyingHost(mute ? 1.0f : 0.0f);
+
+    if (auto* soloParam = apvts.getParameter(prefix + "Solo"))
+        soloParam->setValueNotifyingHost(solo ? 1.0f : 0.0f);
+}
+
 class LoopManagerMixerIntegrationTests : public juce::UnitTest
 {
 public:
@@ -120,6 +131,45 @@ public:
         }
 
         expect(peak > 0.01f, "Expected audible mixed output from loop track.");
+
+        beginTest("Mixer APVTS mute/solo policy owns final audibility");
+
+        auto renderMixedPeak = [&]() -> float
+        {
+            loopManager.processBlock(silentInput);
+            masterOutput.clear();
+            mixer.process(loopManager.getTrackOutputs(), masterOutput);
+
+            float renderedPeak = 0.0f;
+            for (int ch = 0; ch < masterOutput.getNumChannels(); ++ch)
+            {
+                for (int i = 0; i < masterOutput.getNumSamples(); ++i)
+                    renderedPeak = juce::jmax(renderedPeak, std::abs(masterOutput.getSample(ch, i)));
+            }
+            return renderedPeak;
+        };
+
+        const float baselinePeak = renderMixedPeak();
+        expect(baselinePeak > 0.01f, "Baseline should be audible.");
+
+        // Track-local mute/solo states should not silence playback before mixer policy.
+        track->setMute(true);
+        track->setSolo(true);
+        const float localFlagsPeak = renderMixedPeak();
+        expect(localFlagsPeak > 0.01f, "Track-local mute/solo flags should not gate audio upstream.");
+
+        setTrackMuteSolo(apvts, 0, true, false);
+        const float mixerMutedPeak = renderMixedPeak();
+        expect(mixerMutedPeak < baselinePeak * 0.1f, "APVTS mute should silence the track at mixer stage.");
+
+        setTrackMuteSolo(apvts, 0, false, false);
+        setTrackMuteSolo(apvts, 1, false, true);
+        const float otherTrackSoloPeak = renderMixedPeak();
+        expect(otherTrackSoloPeak < baselinePeak * 0.1f, "Solo on another track should suppress this track at mixer stage.");
+
+        setTrackMuteSolo(apvts, 0, false, true);
+        const float ownSoloPeak = renderMixedPeak();
+        expect(ownSoloPeak > 0.01f, "Soloing this track in APVTS should restore audibility.");
     }
 };
 

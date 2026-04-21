@@ -42,6 +42,8 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
         LOG("Track " + juce::String(i) + " created");
     }
 
+    mixerEngine.attachParameters(apvts);
+
     // Cache APVTS parameter pointers for real-time access in processBlock
     for (int i = 0; i < NUM_TRACKS; ++i)
     {

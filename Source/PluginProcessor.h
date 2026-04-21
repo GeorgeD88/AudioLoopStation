@@ -74,6 +74,7 @@ public:
 private:
     //==============================================================================
     // --- LOOP TRACKS ---
+    MixerEngine mixerEngine;
 
     // Sync State
     std::atomic<bool> mIsFirstLoop { true };

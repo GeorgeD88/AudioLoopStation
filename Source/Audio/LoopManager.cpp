@@ -200,18 +200,6 @@ bool LoopManager::isTrackArmed(size_t index) const {
     return false;
 }
 
-bool LoopManager::isTrackMuted(size_t index) const {
-    if (auto* track = getTrack(index))
-        return track->isMuted();
-    return false;
-}
-
-bool LoopManager::isTrackSoloed(size_t index) const {
-    if (auto* track = getTrack(index))
-        return track->isSoloed();
-    return false;
-}
-
 float LoopManager::getTrackVolume(size_t index) const {
     if (auto* track = getTrack(index))
         return track->getCurrentVolumeDb();

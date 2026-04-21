@@ -24,6 +24,7 @@ public:
     void setGlobalSampleCounter(std::atomic<std::int64_t>* counter) noexcept;
     void process(const std::vector<juce::AudioBuffer<float>*>& inputTracks,
                  juce::AudioBuffer<float>& masterOutput);
+    bool isTrackAudible(size_t trackIndex) const noexcept;
     float getLastVolDb(size_t track) const;
     float getLastPan(size_t track) const;
     bool getIsAnyTrackSoloed() const noexcept;
@@ -60,7 +61,7 @@ private:
                                     std::int64_t blockStartSample);
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     void refreshAnySoloStateFromParams() noexcept;
-    bool isAnySoloActive() const;
+    bool isTrackAudible(size_t trackIndex, bool anySoloActive) const noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerEngine)
 };

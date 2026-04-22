@@ -36,7 +36,7 @@ public:
 static juce::AudioProcessorValueTreeState::ParameterLayout createMockLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (int i = 0; i < Config::NUM_TRACKS; ++i)
     {
         const auto prefix = "Track" + juce::String(i + 1) + "_";
         layout.add(std::make_unique<juce::AudioParameterFloat>(
@@ -140,11 +140,11 @@ public:
             mixer.prepare(48000.0, 64);
 
             std::vector<juce::AudioBuffer<float>> trackStorage;
-            trackStorage.reserve(TrackConfig::MAX_TRACKS);
+            trackStorage.reserve(Config::NUM_TRACKS);
             std::vector<juce::AudioBuffer<float>*> inputs;
-            inputs.reserve(TrackConfig::MAX_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
 
-            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
             {
                 setTrackParams(apvts, i, 1.0f, 0.0f);
                 trackStorage.emplace_back(2, 64);
@@ -176,11 +176,11 @@ public:
             mixer.prepare(48000.0, 64);
 
             std::vector<juce::AudioBuffer<float>> trackStorage;
-            trackStorage.reserve(TrackConfig::MAX_TRACKS);
+            trackStorage.reserve(Config::NUM_TRACKS);
             std::vector<juce::AudioBuffer<float>*> inputs;
-            inputs.reserve(TrackConfig::MAX_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
 
-            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
             {
                 trackStorage.emplace_back(2, 64);
                 fillBuffer(trackStorage.back(), 1.0f);
@@ -227,7 +227,7 @@ public:
             mixer.setGlobalSampleCounter(&sampleCounter);
             mixer.prepare(48000.0, 4);
 
-            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
                 setTrackParams(apvts, i, i == 0 ? 1.0f : 0.0f, -1.0f);
 
             juce::AudioBuffer<float> longTrack(2, 16);
@@ -239,9 +239,9 @@ public:
             }
 
             std::vector<juce::AudioBuffer<float>*> inputs;
-            inputs.reserve(TrackConfig::MAX_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
             inputs.push_back(&longTrack);
-            for (int i = 1; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 1; i < Config::NUM_TRACKS; ++i)
                 inputs.push_back(nullptr);
 
             juce::AudioBuffer<float> output(2, 4);
@@ -267,11 +267,11 @@ public:
             mixer.prepare(48000.0, 64);
 
             std::vector<juce::AudioBuffer<float>> trackStorage;
-            trackStorage.reserve(TrackConfig::MAX_TRACKS);
+            trackStorage.reserve(Config::NUM_TRACKS);
             std::vector<juce::AudioBuffer<float>*> inputs;
-            inputs.reserve(TrackConfig::MAX_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
 
-            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
             {
                 setTrackParams(apvts, i, 1.0f, 0.0f);
                 trackStorage.emplace_back(2, 64);
@@ -297,7 +297,7 @@ public:
             expect(maxValue <= 1.0001f, "Positive clipping should cap at +1.0");
             expect(minValue >= -1.0001f, "Positive clipping should stay above -1.0");
 
-            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
                 fillBuffer(trackStorage[i], -10.0f);
 
             output.clear();
@@ -478,17 +478,17 @@ public:
 
             std::vector<juce::AudioBuffer<float>> trackStorage;
             std::vector<juce::AudioBuffer<float>*> inputs;
-            trackStorage.reserve(TrackConfig::MAX_TRACKS);
-            inputs.reserve(TrackConfig::MAX_TRACKS);
+            trackStorage.reserve(Config::NUM_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
 
-            for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
             {
                 setTrackParams(apvts, i, 1.0f, 0.0f);
                 trackStorage.emplace_back(2, 16);
                 inputs.push_back(&trackStorage.back());
             }
 
-            for (int track = 0; track < TrackConfig::MAX_TRACKS; ++track)
+            for (int track = 0; track < Config::NUM_TRACKS; ++track)
             {
                 for (int ch = 0; ch < 2; ++ch)
                 {
@@ -505,7 +505,7 @@ public:
             for (int s = 0; s < 16; ++s)
             {
                 float sum = 0.0f;
-                for (int track = 0; track < TrackConfig::MAX_TRACKS; ++track)
+                for (int track = 0; track < Config::NUM_TRACKS; ++track)
                     sum += trackStorage[static_cast<size_t>(track)].getSample(0, s);
 
                 const float expected = juce::jlimit(-1.0f, 1.0f, sum * MixerEngine::kDefaultHeadroomScale);

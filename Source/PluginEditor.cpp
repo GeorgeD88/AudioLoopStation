@@ -24,31 +24,6 @@ void AudioLoopStationEditor::paint (juce::Graphics& g)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
-void AudioLoopStationEditor::playButtonClicked()
-{
-    // TODO: Connect this to the AudioProcessor to start playback
-    // Example: audioProcessor.startPlayback();
-
-    // Optional: Update UI state (e.g. change button text/color)
-    updateTransportButtons();
-}
-
-void AudioLoopStationEditor::stopButtonClicked()
-{
-    audioProcessor.stopPlayback();
-    mainComponent.setWaveformPlaybackPosition(0.0);
-    updateTransportButtons();
-}
-
-void AudioLoopStationEditor::loopButtonChanged()
-{
-    // old audio player no longer in use
-    // if (audioProcessor.getReaderSource() != nullptr)
-    // {
-    //     audioProcessor.getReaderSource()->setLooping(loopingToggle.getToggleState());
-    // }
-}
-
 void AudioLoopStationEditor::resized()
 {
     auto bounds = getLocalBounds();
@@ -67,30 +42,20 @@ void AudioLoopStationEditor::resized()
  */
 void AudioLoopStationEditor::timerCallback()
 {
-    // update waveform playhead position based on global sample position
-    auto& syncEngine = audioProcessor.getLoopManager().getSyncEngine();
-    double globalSeconds = syncEngine.getGlobalSeconds();
+    bool isFirst = audioProcessor.isFirstLoop();
+    double bpm = audioProcessor.getBpm();
 
-    // find the longest track length to normalize position
-    double maxLength = 0.0;
+    stateLabel.setText(isFirst ? "WAITING FOR FIRST LOOP" : "LOOPING",
+                       juce::dontSendNotification);
+    stateLabel.setColour(juce::Label::textColourId,
+                         isFirst ? Colours_::dub : Colours_::play);
 
-    for (size_t i = 0; i < audioProcessor.getLoopManager().getNumTracks(); ++i){
-        if (auto* track = audioProcessor.getLoopManager().getTrack(i))
-        {
-            if (track->hasLoop())
-            {
-                auto trackLength = static_cast<double>(track->getLoopLengthSamples()/
-                        syncEngine.getSampleRate());
-                maxLength = std::max(maxLength, trackLength);
-            }
-        }
-    }
-    // Only update if we have a valid loop length and playback is active
-    if (maxLength > 0.0 && audioProcessor.isPlaying())
-    {
-        double normalizedPosition = std::fmod(globalSeconds, maxLength) / maxLength;
-        mainComponent.setWaveformPlaybackPosition(normalizedPosition);
-    }
+    if (bpm > 0)
+        bpmLabel.setText(juce::String(bpm, 1) + " BPM", juce::dontSendNotification);
+    else
+        bpmLabel.setText("-- BPM", juce::dontSendNotification);
+
+    repaint();
 }
 
 void AudioLoopStationEditor::openButtonClicked()
@@ -114,9 +79,10 @@ void AudioLoopStationEditor::openButtonClicked()
             auto file = c.getResult();
             if (file.existsAsFile())
             {
-                safeThis->audioProcessor.loadFileToTrack(file, 0);
-                safeThis->mainComponent.setWaveformFile(file);
-                safeThis->mainComponent.setWaveformPlaybackPosition(0.0);
+                // TODO: Refactor
+                // safeThis->audioProcessor.loadFileToTrack(file, 0);
+                // safeThis->mainComponent.setWaveformFile(file);
+                // safeThis->mainComponent.setWaveformPlaybackPosition(0.0);
             }
         });
 }

@@ -33,6 +33,8 @@ private:
 
     juce::TextButton openButton;
     juce::ToggleButton loopingToggle;
+    juce::Label bpmLabel;
+    juce::Label stateLabel;
 
     MainComponent mainComponent;
 

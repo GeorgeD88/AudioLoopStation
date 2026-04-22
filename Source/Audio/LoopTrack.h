@@ -10,11 +10,7 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_dsp/juce_dsp.h"
-// Gin Modules
-// #include "gin_dsp/gin_dsp.h"
 // Project includes
-#include "SyncEngine.h"
-#include "../Utils/TrackConfig.h"
 #include <atomic>
 
 class LoopTrack {

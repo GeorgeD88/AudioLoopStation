@@ -6,7 +6,6 @@
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "Audio/MixerEngine.h"
 #include "Audio/LoopFileHandler.h"
-#include "Utils/TrackConfig.h"
 #include "Audio/LoopTrack.h"
 #include "Utils/DebugLogger.h"
 

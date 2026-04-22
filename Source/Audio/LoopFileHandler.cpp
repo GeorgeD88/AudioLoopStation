@@ -3,6 +3,7 @@
 //
 
 #include "LoopFileHandler.h"
+#include "../Utils/Config.h"
 
 LoopFileHandler::LoopFileHandler() {
     formatManager.registerBasicFormats(); // WAV, AIFF, FLAC, OGG
@@ -43,9 +44,9 @@ bool LoopFileHandler::loadAudioFile(const juce::File &file, LoopTrack& targetTra
     }
 
     // Give buffer to track
-    targetTrack.setAudioBuffer(buffer, fileSampleRate);
+    targetTrack.setLoopFromMix(buffer, fileSampleRate, 0, 0);
 
-    DBG("Successfully loaded into Track " + juce::String(targetTrack.getTrackId()));
+    DBG("Successfully loaded into Track ");
 
     return true;
 }
@@ -67,17 +68,19 @@ bool LoopFileHandler::isSupportedAudioFile(const juce::File &file) {
 }
 
 bool LoopFileHandler::writeTrackToStream(juce::OutputStream &stream, const LoopTrack &track) {
+
+    // Include track settings once those are implemented
     // Write track settings
-    stream.writeFloat(track.getCurrentVolumeDb());
-    stream.writeFloat(track.getCurrentPan());
-    stream.writeBool(track.isMuted());
-    stream.writeBool(track.isSoloed());
-    stream.writeBool(track.isReversed());
-    stream.writeInt(track.getSlipOffset());
+    // stream.writeFloat(track.getCurrentVolumeDb());
+    // stream.writeFloat(track.getCurrentPan());
+    // stream.writeBool(track.isMuted()); *rewrite*
+    // stream.writeBool(track.isSoloed());
+    // stream.writeBool(track.isReversed());
+    // stream.writeInt(track.getSlipOffset());
 
     // Write audio data
-    const auto& buffer = track.getAudioBuffer();
-    int numSamples = buffer.getNumSamples();
+    const auto& buffer = track.getLoopBuffer();
+    int numSamples = track.getLoopLengthSamples();
     int numChannels = buffer.getNumChannels();
 
     stream.writeInt(numSamples);
@@ -92,20 +95,22 @@ bool LoopFileHandler::writeTrackToStream(juce::OutputStream &stream, const LoopT
 
 bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &track) {
     // Read track settings
-    float volume = stream.readFloat();
-    float pan = stream.readFloat();
-    bool muted = stream.readBool();
-    bool soloed = stream.readBool();
-    bool reversed = stream.readBool();
-    int offset = stream.readInt();
+    // Include track settings once those are implemented
+    // Read track settings
+    // float volume = stream.readFloat();
+    // float pan = stream.readFloat();
+    // bool muted = stream.readBool();
+    // bool soloed = stream.readBool();
+    // bool reversed = stream.readBool();
+    // int offset = stream.readInt();
 
     // Apply settings
-    track.setVolumeDb(volume);
-    track.setPan(pan);
-    track.setSolo(soloed);
-    track.setMute(muted);
-    track.setReverse(reversed);
-    track.setSlip(offset);
+    // track.setVolumeDb(volume);
+    // track.setPan(pan);
+    // track.setSolo(soloed);
+    // track.setMute(muted);
+    // track.setReverse(reversed);
+    // track.setSlip(offset);
 
     // Read audio data
     int numSamples = stream.readInt();
@@ -118,11 +123,96 @@ bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &
                     static_cast<size_t>(numSamples) * sizeof(float));
     }
 
-    auto sourceSr = static_cast<double>(TrackConfig::DEFAULT_SAMPLE_RATE);
-    track.setAudioBuffer(buffer, sourceSr);
+    track.setLoopFromMix(buffer, numSamples, 0, 0);
+    track.setTargetMultiplier(1.0f);
 
     return true;
 }
+
+bool LoopFileHandler::saveProject(const juce::File& destination,
+                                  const std::vector<std::unique_ptr<LoopTrack>>& tracks,
+                                  double sampleRate,
+                                  float bpm)
+{
+    juce::ignoreUnused(tracks, sampleRate, bpm);
+
+    DBG("Save Project: Not yet implemented");
+    DBG("  Destination: " + destination.getFullPathName());
+    DBG("  Tracks: " + juce::String(tracks.size()));
+    DBG("  Sample Rate: " + juce::String(sampleRate));
+    DBG("  BPM: " + juce::String(bpm));
+
+    // Create an empty file as placeholder
+    juce::FileOutputStream stream(destination);
+    if (!stream.openedOk())
+    {
+        DBG("Save Project: Failed to create file");
+        return false;
+    }
+
+    // Write a simple header to indicate this is a placeholder
+    stream.writeString("ALS_PROJECT_PLACEHOLDER\n");
+    stream.writeString("Version: 0.1\n");
+    stream.writeString("Tracks: " + juce::String(tracks.size()) + "\n");
+
+    return true;
+}
+
+bool LoopFileHandler::loadProject(const juce::File& source,
+                                  std::vector<std::unique_ptr<LoopTrack>>& tracks,
+                                  double sampleRate,
+                                  float bpm){
+    juce::ignoreUnused(tracks, sampleRate, bpm);
+
+    DBG("Load Project: Not yet implemented");
+    DBG("  Source: " + source.getFullPathName());
+
+    if (!source.existsAsFile())
+    {
+        DBG("Load Project: File does not exist");
+        return false;
+    }
+
+    // For now, just clear all tracks
+    for (auto& track : tracks)
+    {
+        if (track)
+            track->clear();
+    }
+
+    DBG("Load Project: Cleared all tracks (placeholder implementation)");
+    return true;
+}
+
+
+juce::StringArray LoopFileHandler::getSupportedExtensions() {
+    return {"wav", "aiff", "aif", "flac", "ogg" };
+}
+
+juce::String LoopFileHandler::getSupportedExtString() {
+    auto extensions = getSupportedExtensions();
+    juce::String wildcard;
+
+    for (auto& ext : extensions)
+    {
+        if (wildcard.isNotEmpty())
+            wildcard += ";";
+        wildcard += "*." + ext;
+    }
+    return wildcard;
+}
+
+juce::File LoopFileHandler::getDefaultAudioFolder() {
+    return juce::File::getSpecialLocation(juce::File::userMusicDirectory);
+}
+
+juce::File LoopFileHandler::getDefaultProjectFolder() {
+    return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+    .getChildFile("AudioLoopStation").getChildFile("Projects");
+}
+
+
+/* Before refactor
 
 bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManager &loopManager,
                                   const SyncEngine &syncEngine) {
@@ -136,10 +226,10 @@ bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManag
     AlsFormat::initHeader(header);
 
     double projectSampleRate = syncEngine.getSampleRate();
-    if (projectSampleRate <= 0) projectSampleRate = static_cast<double>(TrackConfig::DEFAULT_SAMPLE_RATE);
+    if (projectSampleRate <= 0) projectSampleRate = static_cast<double>(Config::SampleRate::DEFAULT);
     header.sampleRate = static_cast<uint32_t>(projectSampleRate);
-    header.numChannels = TrackConfig::STEREO_MODE ? 2 : 1;
-    header.numTracks = static_cast<uint16_t>(TrackConfig::MAX_TRACKS);
+    header.numChannels = 2
+    header.numTracks = static_cast<uint16_t>(Config::NUM_TRACKS);
 
     // Build JSON metadata
     juce::DynamicObject::Ptr root = new juce::DynamicObject();
@@ -149,7 +239,7 @@ bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManag
     root->setProperty("numTracks", static_cast<int>(header.numTracks));
 
     juce::Array<juce::var> tracksArray;
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i) {
         const LoopTrack* track = loopManager.getTrack(i);
         if (!track) continue;
 
@@ -180,7 +270,7 @@ bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManag
     juce::MemoryOutputStream audioStream(audioBlock, true);
 
     int tracksWithAudio = 0;
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i) {
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i) {
         const LoopTrack* track = loopManager.getTrack(i);
         if (!track || !track->hasAudio()) continue;
 
@@ -271,7 +361,7 @@ bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopMan
 
     double projectSampleRate = header.sampleRate > 0
         ? static_cast<double>(header.sampleRate)
-        : static_cast<double>(TrackConfig::DEFAULT_SAMPLE_RATE);
+        : static_cast<double>(Config::SampleRate::DEFAULT);
 
     // Apply per-track metadata and load audio
     juce::var tracksVar = jsonVar.getProperty("tracks", juce::var());
@@ -286,7 +376,7 @@ bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopMan
         if (!tVar.isObject()) continue;
 
         int index = static_cast<int>(tVar.getProperty("index", 0));
-        if (index < 0 || index >= TrackConfig::MAX_TRACKS) continue;
+        if (index < 0 || index >= Config::NUM_TRACKS) continue;
 
         LoopTrack* track = loopManager.getTrack(static_cast<size_t>(index));
         if (!track) continue;
@@ -331,28 +421,4 @@ bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopMan
     return true;
 }
 
-juce::StringArray LoopFileHandler::getSupportedExtensions() {
-    return {"wav", "aiff", "aif", "flac", "ogg" };
-}
-
-juce::String LoopFileHandler::getSupportedExtString() {
-    auto extensions = getSupportedExtensions();
-    juce::String wildcard;
-
-    for (auto& ext : extensions)
-    {
-        if (wildcard.isNotEmpty())
-            wildcard += ";";
-        wildcard += "*." + ext;
-    }
-    return wildcard;
-}
-
-juce::File LoopFileHandler::getDefaultAudioFolder() {
-    return juce::File::getSpecialLocation(juce::File::userMusicDirectory);
-}
-
-juce::File LoopFileHandler::getDefaultProjectFolder() {
-    return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-    .getChildFile("AudioLoopStation").getChildFile("Projects");
-}
+ */

@@ -5,9 +5,9 @@ TrackControlPanel::TrackControlPanel(AudioLoopStationAudioProcessor& processor,
                                      juce::AudioProcessorValueTreeState& apvtsRef)
     : audioProcessor(processor), apvts(apvtsRef)
 {
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
-        trackStrips[i] = std::make_unique<TrackStripComponent>(i, audioProcessor, apvts);
+        // trackStrips[i] = std::make_unique<TrackStripComponent>(i, audioProcessor, apvts);
         addAndMakeVisible(*trackStrips[i]);
     }
 }
@@ -25,10 +25,10 @@ void TrackControlPanel::paint(juce::Graphics& g)
 
     // Draw track separators
     auto bounds = getLocalBounds();
-    auto trackWidth = bounds.getWidth() / static_cast<float>(TrackConfig::MAX_TRACKS);
+    auto trackWidth = bounds.getWidth() / static_cast<float>(Config::NUM_TRACKS);
 
     g.setColour(juce::Colours::darkgrey);
-    for (int i = 1; i < TrackConfig::MAX_TRACKS; ++i)
+    for (int i = 1; i < Config::NUM_TRACKS; ++i)
     {
         auto x = static_cast<float>(i) * trackWidth;
         g.drawLine(x, 0.0f, x, static_cast<float>(bounds.getHeight()), 1.0f);
@@ -46,7 +46,7 @@ void TrackControlPanel::resized()
 
     constexpr float margin = 5.0f;
 
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (int i = 0; i < Config::NUM_TRACKS; ++i)
     {
         flexBox.items.add(juce::FlexItem(*trackStrips[i]).withFlex(1.0f).withMinWidth(80.0f).withMargin(margin));
     }

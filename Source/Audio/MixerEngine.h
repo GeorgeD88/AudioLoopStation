@@ -9,7 +9,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
-#include "../Utils/TrackConfig.h"
+#include "../Utils/Config.h"
 
 class MixerEngine : private juce::AudioProcessorValueTreeState::Listener {
 public:
@@ -30,19 +30,19 @@ public:
 
 private:
     // APVTS parameter pointers (safe for audio-thread reads via atomic load).
-    std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> volParams{};
-    std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> panParams{};
-    std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> muteParams{};
-    std::array<std::atomic<float>*, TrackConfig::MAX_TRACKS> soloParams{};
+    std::array<std::atomic<float>*, Config::NUM_TRACKS> volParams{};
+    std::array<std::atomic<float>*, Config::NUM_TRACKS> panParams{};
+    std::array<std::atomic<float>*, Config::NUM_TRACKS> muteParams{};
+    std::array<std::atomic<float>*, Config::NUM_TRACKS> soloParams{};
 
     // Per-track smoothing/history.
-    std::array<juce::LinearSmoothedValue<float>, TrackConfig::MAX_TRACKS> volumeSmoothers;
-    std::array<juce::dsp::Panner<float>, TrackConfig::MAX_TRACKS> panners;
-    std::array<float, TrackConfig::MAX_TRACKS> lastVolDb{};
-    std::array<float, TrackConfig::MAX_TRACKS> lastPan{};
+    std::array<juce::LinearSmoothedValue<float>, Config::NUM_TRACKS> volumeSmoothers;
+    std::array<juce::dsp::Panner<float>, Config::NUM_TRACKS> panners;
+    std::array<float, Config::NUM_TRACKS> lastVolDb{};
+    std::array<float, Config::NUM_TRACKS> lastPan{};
 
     // Scratch buffers used each block before summing into master.
-    std::array<juce::AudioBuffer<float>, TrackConfig::MAX_TRACKS> trackWorkingBuffers{};
+    std::array<juce::AudioBuffer<float>, Config::NUM_TRACKS> trackWorkingBuffers{};
     std::vector<float> gainRampScratch;
 
     double sampleRate = 0.0;

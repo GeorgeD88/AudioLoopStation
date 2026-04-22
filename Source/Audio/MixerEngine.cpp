@@ -11,7 +11,7 @@ constexpr float kClipMax = 1.0f;
 MixerEngine::MixerEngine()
 {
     // starting with safe defaults
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         volParams[i] = nullptr;
         panParams[i] = nullptr;
@@ -39,7 +39,7 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
     spec.maximumBlockSize = static_cast<juce::uint32>(blockSize);
     spec.numChannels = static_cast<juce::uint32>(kStereoChannels);
 
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         volumeSmoothers[i].reset(sampleRate, kSmoothingSeconds); // ~10ms
         volumeSmoothers[i].setCurrentAndTargetValue(1.0f);
@@ -58,7 +58,7 @@ void MixerEngine::attachParameters(juce::AudioProcessorValueTreeState& apvts)
     attachedApvts = &apvts;
 
     // hook APVTS params here (value names might change later, these are temporary)
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         auto idx = juce::String(i + 1);
         auto prefix = "Track" + idx + "_";
@@ -81,7 +81,7 @@ void MixerEngine::detachParameters()
     if (attachedApvts == nullptr)
         return;
 
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         auto idx = juce::String(i + 1);
         auto prefix = "Track" + idx + "_";
@@ -167,7 +167,7 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
     const bool anySoloActive = isAnySoloActive();
 
     // read params per block (audio thread), process each track, then sum into master
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         float volValue = 1.0f;
         float pan = 0.0f;
@@ -254,14 +254,14 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
 
 float MixerEngine::getLastVolDb(size_t track) const
 {
-    if (track >= TrackConfig::MAX_TRACKS)
+    if (track >= Config::NUM_TRACKS)
         return 0.0f;
     return lastVolDb[track];
 }
 
 float MixerEngine::getLastPan(size_t track) const
 {
-    if (track >= TrackConfig::MAX_TRACKS)
+    if (track >= Config::NUM_TRACKS)
         return 0.0f;
     return lastPan[track];
 }
@@ -286,7 +286,7 @@ void MixerEngine::parameterChanged(const juce::String& parameterID, float newVal
 void MixerEngine::refreshAnySoloStateFromParams() noexcept
 {
     bool anySolo = false;
-    for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         if (soloParams[i] != nullptr && soloParams[i]->load() > 0.5f)
         {

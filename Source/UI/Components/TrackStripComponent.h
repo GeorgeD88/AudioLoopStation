@@ -21,7 +21,6 @@ public:
 private:
     static juce::Colour getTrackColour(int index);
     void setupControls();
-    void timerCallback() override;
     void updateButtonColours();
 
     int trackIndex;
@@ -31,7 +30,6 @@ private:
     juce::Label trackLabel;
     juce::Slider volumeSlider;
     juce::Slider panSlider;
-    juce::TextButton recordArmButton;
     juce::TextButton muteButton;
     juce::TextButton soloButton;
     juce::TextButton clearButton;

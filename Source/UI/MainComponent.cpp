@@ -3,12 +3,12 @@
 //==============================================================================
 MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
     : audioProcessor(processor),
-      waveformDisplay(processor.getFormatManager()),
-      vuMeter([&proc = processor] { return proc.getOutputLevel(); }),
-      trackControlPanel(processor, processor.getApvts())
+      //waveformDisplay(processor.getFormatManager()),
+      //vuMeter([&proc = processor] { return proc.getOutputLevel(); }),
+      trackControlPanel(processor, processor.apvts)
 {
-    addAndMakeVisible(waveformDisplay);
-    addAndMakeVisible(vuMeter);
+    // addAndMakeVisible(waveformDisplay);
+    // addAndMakeVisible(vuMeter);
     addAndMakeVisible(transportComponent);
     addAndMakeVisible(trackControlPanel);
 
@@ -18,12 +18,12 @@ MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
 
 void MainComponent::setWaveformFile(const juce::File& file)
 {
-    waveformDisplay.setSource(file);
+    // waveformDisplay.setSource(file);
 }
 
 void MainComponent::setWaveformPlaybackPosition(double position)
 {
-    waveformDisplay.setPlaybackPosition(position);
+    // waveformDisplay.setPlaybackPosition(position);
 }
 
 MainComponent::~MainComponent()
@@ -48,8 +48,8 @@ void MainComponent::resized()
     // Waveform + VU meter row
     juce::FlexBox topRow;
     topRow.flexDirection = juce::FlexBox::Direction::row;
-    topRow.items.add(juce::FlexItem(waveformDisplay).withFlex(1.0f).withMinWidth(100.0f));
-    topRow.items.add(juce::FlexItem(vuMeter).withWidth(30.0f).withMinWidth(20.0f).withMaxWidth(50.0f).withMargin(4.0f));
+    // topRow.items.add(juce::FlexItem(waveformDisplay).withFlex(1.0f).withMinWidth(100.0f));
+    // topRow.items.add(juce::FlexItem(vuMeter).withWidth(30.0f).withMinWidth(20.0f).withMaxWidth(50.0f).withMargin(4.0f));
     flexBox.items.add(juce::FlexItem(topRow)
                           .withHeight(120.0f)
                           .withMinHeight(80.0f)

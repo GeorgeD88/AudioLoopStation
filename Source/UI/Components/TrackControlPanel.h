@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "TrackStripComponent.h"
-#include "../../Utils/TrackConfig.h"
+#include "../../Utils/Config.h"
 #include "../../PluginProcessor.h"
 
 //==============================================================================
@@ -19,7 +19,7 @@ public:
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& apvts;
-    std::array<std::unique_ptr<TrackStripComponent>, TrackConfig::MAX_TRACKS> trackStrips;
+    std::array<std::unique_ptr<TrackStripComponent>, Config::NUM_TRACKS> trackStrips;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TrackControlPanel)
 };

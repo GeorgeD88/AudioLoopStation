@@ -1,13 +1,11 @@
 #pragma once
 #include <cstdint>
 #include <cstring>
-#include "../Utils/TrackConfig.h"
-
 namespace AlsFormat {
 
 // File Structure: [0:512] Fixed Header | [512:N] JSON Metadata | [N:end] Binary Audio
 constexpr uint32_t MAGIC = 0x00534C41;  // "ALS\0"
-constexpr uint32_t VERSION = static_cast<uint32_t>(TrackConfig::PROJECT_VERSION);
+constexpr uint32_t VERSION = 1.0;
 constexpr size_t HEADER_SIZE = 512;
 constexpr uint16_t BITS_PER_SAMPLE = 32;
 

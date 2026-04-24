@@ -31,6 +31,9 @@ TrackComponent::TrackComponent(AudioLoopStationAudioProcessor& p, LoopTrack& tra
     addAndMakeVisible(volumeSlider);
     volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible(panSlider);
+    volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
     addAndMakeVisible(mOutputSelector);
     mOutputSelector.addItem("Monitor 1/2", 1);
@@ -44,6 +47,7 @@ TrackComponent::TrackComponent(AudioLoopStationAudioProcessor& p, LoopTrack& tra
     auto idx = juce::String(trackIndex + 1);
     const juce::String prefix = "Track" + idx + "_";
     mVolAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.apvts, prefix + "Volume", volumeSlider);
+    mPanAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.apvts, prefix + "Pan", panSlider);
     mRecAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Record", recPlayButton);
     mStopAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Stop", stopButton);
     mClearAttachment     = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Clear", clearButton);
@@ -166,7 +170,11 @@ void TrackComponent::resized()
     muteButton.setBounds(r2.removeFromLeft(30));  r2.removeFromLeft(gp);
     soloButton.setBounds(r2.removeFromLeft(30));  r2.removeFromLeft(6);
     mOutputSelector.setBounds(r2.removeFromRight(110)); r2.removeFromRight(6);
-    volumeSlider.setBounds(r2);
+
+    // --- split remaining space: 70% volume, 30% pan ---
+    auto volArea = r2.removeFromLeft(static_cast<int>(r2.getWidth() * 0.7f));
+    volumeSlider.setBounds(volArea);
+    panSlider.setBounds(r2);                          // the leftover 30%
 }
 
 void TrackComponent::updateButtonVisuals()

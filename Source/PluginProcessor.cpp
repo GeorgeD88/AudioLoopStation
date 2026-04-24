@@ -533,6 +533,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioLoopStationAudioProcess
         layout.add(std::make_unique<juce::AudioParameterFloat>(
                 juce::ParameterID(prefix + "Volume", 1), name + " Volume",
                 juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.8f));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID(prefix + "Pan", 1), name + " Pan",
+                juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
         layout.add(std::make_unique<juce::AudioParameterBool>(
                 juce::ParameterID(prefix + "Record", 1), name + " Rec/Play", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(

@@ -22,20 +22,34 @@ namespace Colours_
     const juce::Colour textPrimary  { 0xfff0f0f8 };
     const juce::Colour textDim      { 0xff8888aa };
 
-    // Accent
-    const juce::Colour rec          { 0xffff4b5c };
-    const juce::Colour play         { 0xff00d26a };
-    const juce::Colour dub          { 0xfff5a623 };
-    const juce::Colour stop         { 0xff5865f2 };
-    const juce::Colour idle         { 0xff2d2d4e };
-    const juce::Colour mute         { 0xffff4b5c };
-    const juce::Colour solo         { 0xffffd93d };
-    const juce::Colour afterloop    { 0xff00b8d4 };
-    const juce::Colour fxReady      { 0xffbb86fc };
-    const juce::Colour clear        { 0xff6e3040 };
-    const juce::Colour undo         { 0xff3d3d5c };
+    // Track accent colors from original TrackStripComponent::getTrackColour
+    const juce::Colour trackRed     { 0xffe53935 };
+    const juce::Colour trackTeal    { 0xff009688 };
+    const juce::Colour trackYellow  { 0xfffdd835 };
+    const juce::Colour trackGreen   { 0xff43a047 };
+
+    // Transport / button colours (matching original TransportComponent)
+    const juce::Colour rec          = trackRed;          // record button (red)
+    const juce::Colour play         = trackGreen;        // play button (green)
+    const juce::Colour stop         { 0xffffa500 };      // orange (original stop colour)
+    const juce::Colour undo         { 0xff0000ff };      // blue (original undo colour)
+
+
+    // Track state colours (used in TrackStripComponent)
+    const juce::Colour dub          = trackYellow;       // overdubbing / queued
+    const juce::Colour idle         { 0xff2d2d4e };      // inactive
+    const juce::Colour mute         = trackRed;          // mute indicator
+    const juce::Colour solo         { 0xffffd93d };      // solo (yellow)
+    const juce::Colour afterloop    { 0xff00b8d4 };      // after loop (cyan)
+    const juce::Colour fxReady      { 0xffbb86fc };      // FX replace ready (purple)
+    const juce::Colour clear        { 0xff6e3040 };      // clear (dark red)
+    const juce::Colour divMul       { 0xff3d4f7c };      // multiply/divide buttons
+
+    // Sliders
     const juce::Colour sliderTrack  { 0xff2a2a46 };
-    const juce::Colour sliderThumb  { 0xff00d26a };
+    const juce::Colour sliderThumb  = play;              // use play green for thumb
+
+    // Beat indicators (for TrackComponent, if used)
     const juce::Colour beatActive   { 0xffffa040 };
     const juce::Colour beatIdle     { 0xff2a2b4a };
     const juce::Colour beatMuted    { 0xff3d3050 };
@@ -53,6 +67,9 @@ public:
         setColour(juce::PopupMenu::backgroundColourId,       Colours_::surface);
         setColour(juce::PopupMenu::textColourId,             Colours_::textPrimary);
         setColour(juce::PopupMenu::highlightedBackgroundColourId, Colours_::surfaceLight);
+        setColour(juce::TextButton::buttonColourId,          Colours_::idle);
+        setColour(juce::TextButton::textColourOffId,         Colours_::textPrimary);
+        setColour(juce::TextButton::textColourOnId,          Colours_::textPrimary);
     }
 
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,

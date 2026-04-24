@@ -8,7 +8,7 @@ TrackControlPanel::TrackControlPanel(AudioLoopStationAudioProcessor& processor,
     for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
         // trackStrips[i] = std::make_unique<TrackStripComponent>(i, audioProcessor, apvts);
-        addAndMakeVisible(*trackStrips[i]);
+        // addAndMakeVisible(*trackStrips[i]);
     }
 }
 

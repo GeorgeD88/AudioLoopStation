@@ -21,7 +21,7 @@ public:
     // Declare TimerCallback
     void timerCallback() override;
 
-    // Custom functions
+    // Custom functions - may be refactored
     void openButtonClicked();
     void playButtonClicked();
     void stopButtonClicked();
@@ -30,13 +30,27 @@ public:
 
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
+    CustomLookAndFeel lookAndFeel;
 
+    juce::TextButton resetButton { "RESET" };
+    juce::TextButton bounceButton { "BOUNCE" };       // NOTE: sums active tracks into Track1 NOT a "PLAY ALL" button
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> mResetAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> mBounceAttachment;
+
+    // track components and meters will go to -> MainComponent
+    // Main component here
+    MainComponent mainComponent;
+
+    // File loader when refactor is fully implemented
     juce::TextButton openButton;
     juce::ToggleButton loopingToggle;
+
     juce::Label bpmLabel;
     juce::Label stateLabel;
+    juce::Label midiSyncLabel;
+    juce::ComboBox midiSyncChannelSelector;
 
-    MainComponent mainComponent;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> mMidiSyncChannelAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationEditor)
 };

@@ -148,22 +148,46 @@ namespace Config {
 
     /** PARAMETER NAMES (for APVTS) */
     namespace ParamNames {
-        inline juce::String volume(int track) { return "vol_" + juce::String(track); }
-        inline juce::String recPlay(int track) { return "rec_" + juce::String(track); }
-        inline juce::String mute(int track) { return "mute_" + juce::String(track); }
-        inline juce::String stop(int track) { return "stop_" + juce::String(track); }
-        inline juce::String solo(int track) { return "solo_" + juce::String(track); }
-        inline juce::String afterLoop(int track) { return "afterloop_" + juce::String(track); }
-        inline juce::String clear(int track) { return "clear_" + juce::String(track); }
-        inline juce::String undo(int track) { return "undo_" + juce::String(track); }
-        inline juce::String multiply(int track) { return "mul_" + juce::String(track); }
-        inline juce::String divide(int track) { return "div_" + juce::String(track); }
-        inline juce::String outputSelect(int track) { return "out_select_" + juce::String(track); }
-        inline juce::String fxReplace(int track) { return "resample_" + juce::String(track); }
+        inline juce::String volume(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Volume";
+        }
+        inline juce::String recPlay(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "Record";
+        }
+        inline juce::String mute(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Mute";
+        }
+        inline juce::String stop(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Stop";
+        }
+        inline juce::String solo(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Solo";
+        }
+        inline juce::String afterLoop(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_AfterLoop";
+        }
+        inline juce::String clear(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Clear";
+        }
+        inline juce::String undo(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Undo";
+        }
+        inline juce::String multiply(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Multiply";
+        }
+        inline juce::String divide(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_Divide";
+        }
+        inline juce::String outputSelect(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_OutputSelect";
+        }
+        inline juce::String fxReplace(int trackIndex) {
+            return "Track" + juce::String(trackIndex + 1) + "_FxReplace";
+        }
 
-        constexpr const char* BOUNCE_BACK = "bounce_back";
-        constexpr const char* RESET_ALL = "reset_all";
-        constexpr const char* MIDI_SYNC_CHANNEL = "midi_sync_channel";
+        constexpr const char* BOUNCE_BACK = "BounceBack";
+        constexpr const char* RESET_ALL = "ResetAll";
+        constexpr const char* MIDI_SYNC_CHANNEL = "MidiSyncChannel";
     }
 
     /** OUTPUT BUS CONFIGURATION */

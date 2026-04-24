@@ -43,7 +43,7 @@ namespace Colours_
     const juce::Colour afterloop    { 0xff00b8d4 };      // after loop (cyan)
     const juce::Colour fxReady      { 0xffbb86fc };      // FX replace ready (purple)
     const juce::Colour clear        { 0xff6e3040 };      // clear (dark red)
-    const juce::Colour divMul       { 0xff3d4f7c };      // multiply/divide buttons
+    // const juce::Colour divMul       { 0xff3d4f7c };      // multiply/divide buttons
 
     // Sliders
     const juce::Colour sliderTrack  { 0xff2a2a46 };

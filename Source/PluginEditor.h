@@ -21,6 +21,15 @@ public:
     // Declare TimerCallback
     void timerCallback() override;
 
+    // Keyboard shortcut handler:
+    //   SPACE       → play / stop toggle
+    //   1–4         → arm / disarm track N
+    //   SHIFT+1–4   → mute / unmute track N
+    bool keyPressed(const juce::KeyPress& key) override;
+
+    // Grab keyboard focus when the editor is clicked so shortcuts work in hosts
+    void mouseDown(const juce::MouseEvent& event) override;
+
     // Custom functions
     void openButtonClicked();
     void playButtonClicked();

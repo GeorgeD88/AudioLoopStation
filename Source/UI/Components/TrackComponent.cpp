@@ -41,17 +41,18 @@ TrackComponent::TrackComponent(AudioLoopStationAudioProcessor& p, LoopTrack& tra
     mOutputSelector.addItem("Output 11/12", 6);
     mOutputSelector.addItem("Output 13/14", 7);
 
-    auto idx = juce::String(trackIndex);
-    mVolAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "vol_" + idx, volumeSlider);
-    mRecAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "rec_" + idx, recPlayButton);
-    mStopAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "stop_" + idx, stopButton);
-    mClearAttachment     = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "clear_" + idx, clearButton);
-    mMuteAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "mute_" + idx, muteButton);
-    mSoloAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "solo_" + idx, soloButton);
-    mUndoAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "undo_" + idx, undoButton);
-    mAfterLoopAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "afterloop_" + idx, afterLoopButton);
-    mOutSelectAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, "out_select_" + idx, mOutputSelector);
-    mResampleAttachment  = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "resample_" + idx, fxReplaceButton);
+    auto idx = juce::String(trackIndex + 1);
+    const juce::String prefix = "Track" + idx + "_";
+    mVolAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.apvts, prefix + "Volume", volumeSlider);
+    mRecAttachment       = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Record", recPlayButton);
+    mStopAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Stop", stopButton);
+    mClearAttachment     = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Clear", clearButton);
+    mMuteAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Mute", muteButton);
+    mSoloAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Solo", soloButton);
+    mUndoAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Undo", undoButton);
+    mAfterLoopAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Afterloop", afterLoopButton);
+    mOutSelectAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, prefix + "OutSelect", mOutputSelector);
+    mResampleAttachment  = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Resample", fxReplaceButton);
     startTimerHz(30);
 }
 

@@ -47,23 +47,23 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
     // Cache APVTS parameter pointers for real-time access in processBlock
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
-        auto idx = juce::String(i);
-        mParamVol[i]       = apvts.getRawParameterValue("vol_" + idx);
-        mParamRecPlay[i]   = apvts.getRawParameterValue("rec_" + idx);
-        mParamStop[i]      = apvts.getRawParameterValue("stop_" + idx);
-        mParamMute[i]      = apvts.getRawParameterValue("mute_" + idx);
-        mParamSolo[i]      = apvts.getRawParameterValue("solo_" + idx);
-        mParamAfterLoop[i] = apvts.getRawParameterValue("afterloop_" + idx);
-        mParamClear[i]     = apvts.getRawParameterValue("clear_" + idx);
-        mParamUndo[i]      = apvts.getRawParameterValue("undo_" + idx);
-        mParamMul[i]       = apvts.getRawParameterValue("mul_" + idx);
-        mParamDiv[i]       = apvts.getRawParameterValue("div_" + idx);
-        mParamOutSelect[i] = apvts.getRawParameterValue("out_select_" + idx);
-        mParamResample[i]  = apvts.getRawParameterValue("resample_" + idx);
+        const juce::String prefix = "Track" + juce::String(i + 1) + "_";
+        mParamVol[i]       = apvts.getRawParameterValue(prefix + "Volume");
+        mParamRecPlay[i]   = apvts.getRawParameterValue(prefix + "Record");
+        mParamStop[i]      = apvts.getRawParameterValue(prefix + "Stop");
+        mParamMute[i]      = apvts.getRawParameterValue(prefix + "Mute");
+        mParamSolo[i]      = apvts.getRawParameterValue(prefix + "Solo");
+        mParamAfterLoop[i] = apvts.getRawParameterValue(prefix + "Afterloop");
+        mParamClear[i]     = apvts.getRawParameterValue(prefix + "Clear");
+        mParamUndo[i]      = apvts.getRawParameterValue(prefix + "Undo");
+        mParamMul[i]       = apvts.getRawParameterValue(prefix + "Multiply");
+        mParamDiv[i]       = apvts.getRawParameterValue(prefix + "Divide");
+        mParamOutSelect[i] = apvts.getRawParameterValue(prefix + "OutSelect");
+        mParamResample[i]  = apvts.getRawParameterValue(prefix + "FxReplace");
     }
-    mParamBounce          = apvts.getRawParameterValue("bounce_back");
-    mParamReset           = apvts.getRawParameterValue("reset_all");
-    mParamMidiSyncChannel = apvts.getRawParameterValue("midi_sync_channel");
+    mParamBounce          = apvts.getRawParameterValue("BounceBack");
+    mParamReset           = apvts.getRawParameterValue("ResetAll");
+    mParamMidiSyncChannel = apvts.getRawParameterValue("MidiSyncChannel");
 }
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
@@ -527,44 +527,44 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioLoopStationAudioProcess
 
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
-        auto idx = juce::String(i);
-        auto name = "Track " + juce::String(i + 1);
+        const juce::String prefix = "Track" + juce::String(i + 1) + "_";
+        auto name = "Track " + juce::String(i + 1);                                 // Display label
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                juce::ParameterID("vol_" + idx, 1), name + " Volume",
+                juce::ParameterID(prefix + "Volume", 1), name + " Volume",
                 juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.8f));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("rec_" + idx, 1), name + " Rec/Play", false));
+                juce::ParameterID(prefix + "Record", 1), name + " Rec/Play", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("mute_" + idx, 1), name + " Mute", false));
+                juce::ParameterID(prefix + "Mute", 1), name + " Mute", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("stop_" + idx, 1), name + " Stop", false));
+                juce::ParameterID(prefix + "Stop", 1), name + " Stop", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("solo_" + idx, 1), name + " Solo", false));
+                juce::ParameterID(prefix + "Solo", 1), name + " Solo", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("afterloop_" + idx, 1), name + " After Loop", false));
+                juce::ParameterID(prefix + "Afterloop", 1), name + " After Loop", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("clear_" + idx, 1), name + " Clear", false));
+                juce::ParameterID(prefix + "Clear", 1), name + " Clear", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("undo_" + idx, 1), name + " Undo", false));
+                juce::ParameterID(prefix + "Undo", 1), name + " Undo", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("mul_" + idx, 1), name + " Multiply", false));
+                juce::ParameterID(prefix + "Multiply", 1), name + " Multiply", false));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("div_" + idx, 1), name + " Divide", false));
+                juce::ParameterID(prefix + "Divide", 1), name + " Divide", false));
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                juce::ParameterID("out_select_" + idx, 1), name + " Output",
+                juce::ParameterID(prefix + "OutSelect", 1), name + " Output",
                 juce::StringArray{"Monitor 1/2", "Output 3/4", "Output 5/6", "Output 7/8",
                                   "Output 9/10", "Output 11/12", "Output 13/14"}, i + 1));
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                juce::ParameterID("resample_" + idx, 1), name + " FX Replace", false));
+                juce::ParameterID(prefix + "FxReplace", 1), name + " FX Replace", false));
     }
 
     layout.add(std::make_unique<juce::AudioParameterBool>(
-            juce::ParameterID("bounce_back", 1), "Bounce Back", false));
+            juce::ParameterID("BounceBack", 1), "Bounce Back", false));
     layout.add(std::make_unique<juce::AudioParameterBool>(
-            juce::ParameterID("reset_all", 1), "Reset All", false));
+            juce::ParameterID("ResetAll", 1), "Reset All", false));
     layout.add(std::make_unique<juce::AudioParameterChoice>(
-            juce::ParameterID("midi_sync_channel", 1), "MIDI Sync Channel",
+            juce::ParameterID("MidiSyncChannel", 1), "MIDI Sync Channel",
             juce::StringArray{
                     "CH 1", "CH 2", "CH 3", "CH 4", "CH 5", "CH 6", "CH 7", "CH 8",
                     "CH 9", "CH 10", "CH 11", "CH 12", "CH 13", "CH 14", "CH 15", "CH 16"

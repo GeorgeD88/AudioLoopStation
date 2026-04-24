@@ -32,11 +32,13 @@ private:
     juce::TextButton muteButton      { "M" };
     juce::TextButton soloButton      { "S" };
     juce::Slider     volumeSlider;
+    juce::Slider     panSlider;
     juce::ComboBox   mOutputSelector;
 
     void updateButtonVisuals();
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   mVolAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   mPanAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   mRecAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   mStopAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   mClearAttachment;

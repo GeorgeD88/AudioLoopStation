@@ -11,6 +11,7 @@ AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& 
 
     addAndMakeVisible(mainComponent);
 
+    setWantsKeyboardFocus(true);
     startTimerHz(30);
     setSize (1200, 900);
 }
@@ -124,4 +125,62 @@ void AudioLoopStationEditor::openButtonClicked()
 void AudioLoopStationEditor::updateTransportButtons()
 {
     // Logic for changing button colors/text will go here
+}
+
+//==============================================================================
+bool AudioLoopStationEditor::keyPressed(const juce::KeyPress& key)
+{
+    // SPACE — play/stop toggle
+    if (key == juce::KeyPress(juce::KeyPress::spaceKey))
+    {
+        if (audioProcessor.isPlaying())
+        {
+            audioProcessor.stopPlayback();
+            mainComponent.setWaveformPlaybackPosition(0.0);
+        }
+        else
+        {
+            audioProcessor.startPlayback();
+        }
+        updateTransportButtons();
+        return true;
+    }
+
+    auto& loopManager = audioProcessor.getLoopManager();
+    auto& apvts       = audioProcessor.getApvts();
+
+    // Keys 1–4: arm / disarm the corresponding track
+    // SHIFT+1–4: mute / unmute the corresponding track
+    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    {
+        const int digit = '1' + i;
+
+        if (key == juce::KeyPress(digit))
+        {
+            if (auto* track = loopManager.getTrack(static_cast<size_t>(i)))
+            {
+                const bool nowArmed = !track->isArmed();
+                track->armForRecording(nowArmed);
+            }
+            return true;
+        }
+
+        if (key == juce::KeyPress(digit, juce::ModifierKeys::shiftModifier, 0))
+        {
+            const juce::String paramId = "Track" + juce::String(i + 1) + "_Mute";
+            if (auto* param = apvts.getParameter(paramId))
+            {
+                const float toggled = param->getValue() > 0.5f ? 0.0f : 1.0f;
+                param->setValueNotifyingHost(toggled);
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void AudioLoopStationEditor::mouseDown(const juce::MouseEvent& /*event*/)
+{
+    grabKeyboardFocus();
 }

@@ -319,8 +319,6 @@ void LoopTrack::clear() {
     // Reset all states
     currentVolumeDb.store(TrackConfig::DEFAULT_VOLUME_DB);
     currentPan.store(TrackConfig::DEFAULT_PAN);
-    muteState.store(false);
-    soloState.store(false);
     reverseState.store(false);
     slipOffset.store(0);
 
@@ -400,8 +398,6 @@ void LoopTrack::setPan(float newPan) {
                               newPan));
 }
 
-void LoopTrack::setMute (bool shouldMute) { muteState.store(shouldMute); }
-void LoopTrack::setSolo(bool shouldSolo) { soloState.store(shouldSolo); }
 void LoopTrack::setReverse(bool reverse) { reverseState.store(reverse); }
 void LoopTrack::setSlip(int samples) { slipOffset.store(samples); }
 

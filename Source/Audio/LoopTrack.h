@@ -44,7 +44,7 @@ public:
     void releaseResources();
     void processBlock(const juce::AudioBuffer<float>& input,
                       juce::AudioBuffer<float>& output,
-                      const SyncEngine& syncEngine);                       // for mute logic
+                      const SyncEngine& syncEngine);                       // for timing sync
 
     // === Transport Controls
     void armForRecording(bool armed);
@@ -58,8 +58,6 @@ public:
     // === DSP Controls (per Track)===
     void setVolumeDb(float volumeDb);
     void setPan(float pan);                                     // REQUIRED FEATURE 1 from OSU project page
-    void setMute(bool muted);
-    void setSolo(bool soloed);
     void setReverse(bool reverse);                              // REQUIRED FEATURE 2 from OSU project page
     void setSlip(int samples);                                  // REQUIRED FEATURE 3 from OSU project page
     void setLoopLength (int samples);
@@ -76,8 +74,6 @@ public:
     int getLoopLengthSamples() const noexcept { return loopLengthSamples.load(); }
     bool hasLoop() const noexcept { return loopLengthSamples.load() > 0; }
     bool isArmed() const noexcept { return isArmedForRecording.load(); }
-    bool isMuted() const noexcept { return muteState.load(); }
-    bool isSoloed() const noexcept { return soloState.load(); }
     bool isReversed() const noexcept { return reverseState.load(); }
     int getSlipOffset() const noexcept { return slipOffset.load(); }
     float getCurrentVolumeDb() const noexcept { return currentVolumeDb.load(); }
@@ -124,8 +120,6 @@ private:
     gin::EasedValueSmoother<float, gin::QuadraticOutEasing> panSmoother;
     std::atomic<float> currentVolumeDb { TrackConfig::DEFAULT_VOLUME_DB };
     std::atomic<float> currentPan { TrackConfig::DEFAULT_PAN };
-    std::atomic<bool> muteState { false };
-    std::atomic<bool> soloState { false };
     std::atomic<bool> reverseState { false };
     std::atomic<int> slipOffset { 0 };
 
@@ -146,5 +140,3 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopTrack)
 };
-
-

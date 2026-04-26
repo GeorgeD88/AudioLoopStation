@@ -164,7 +164,7 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
     // master buffer is rebuilt every block by summing trackWorkingBuffers
     masterOutput.clear();
 
-    const bool anySoloActive = isAnySoloActive();
+    const bool anySoloActive = getIsAnyTrackSoloed();
 
     // read params per block (audio thread), process each track, then sum into master
     for (size_t i = 0; i < TrackConfig::MAX_TRACKS; ++i)
@@ -181,10 +181,7 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
         lastVolDb[i] = volValue;
         lastPan[i] = pan;
 
-        const bool trackMuted = muteParams[i] != nullptr && muteParams[i]->load() > 0.5f;
-        const bool trackSoloed = soloParams[i] != nullptr && soloParams[i]->load() > 0.5f;
-        const bool trackAudible = anySoloActive ? trackSoloed : !trackMuted;
-        if (!trackAudible)
+        if (!isTrackAudible(i, anySoloActive))
             continue;
 
         const juce::AudioBuffer<float>* sourceTrack =
@@ -252,6 +249,22 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
     }
 }
 
+bool MixerEngine::isTrackAudible(size_t trackIndex) const noexcept
+{
+    return isTrackAudible(trackIndex,  getIsAnyTrackSoloed()); 
+}
+
+bool MixerEngine::isTrackAudible(size_t trackIndex, bool anySoloActive) const noexcept
+{
+    if (trackIndex >= TrackConfig::MAX_TRACKS)
+        return false; 
+
+    const bool trackMuted = muteParams[trackIndex] != nullptr && muteParams[trackIndex]->load() > 0.5f; 
+    const bool trackSoloed = soloParams[trackIndex] !=  nullptr && soloParams[trackIndex]->load() > 0.5f;
+
+    return anySoloActive  ? trackSoloed : !trackMuted;
+}
+
 float MixerEngine::getLastVolDb(size_t track) const
 {
     if (track >= TrackConfig::MAX_TRACKS)
@@ -264,11 +277,6 @@ float MixerEngine::getLastPan(size_t track) const
     if (track >= TrackConfig::MAX_TRACKS)
         return 0.0f;
     return lastPan[track];
-}
-
-bool MixerEngine::isAnySoloActive() const
-{
-    return isAnyTrackSoloed.load(std::memory_order_relaxed);
 }
 
 bool MixerEngine::getIsAnyTrackSoloed() const noexcept

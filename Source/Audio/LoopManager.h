@@ -46,8 +46,6 @@ public:
     // === Per-track status helpers (for UI) ===
     LoopTrack::State getTrackState(size_t index) const;
     bool isTrackArmed(size_t index) const;
-    bool isTrackMuted(size_t index) const;
-    bool isTrackSoloed(size_t index) const;
     float getTrackVolume(size_t index) const;
     float getTrackPan(size_t index) const;
 
@@ -65,5 +63,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopManager)
 };
-
 

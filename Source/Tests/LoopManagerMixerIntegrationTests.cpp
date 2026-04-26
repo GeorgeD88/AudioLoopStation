@@ -152,12 +152,6 @@ public:
         const float baselinePeak = renderMixedPeak();
         expect(baselinePeak > 0.01f, "Baseline should be audible.");
 
-        // Track-local mute/solo states should not silence playback before mixer policy.
-        track->setMute(true);
-        track->setSolo(true);
-        const float localFlagsPeak = renderMixedPeak();
-        expect(localFlagsPeak > 0.01f, "Track-local mute/solo flags should not gate audio upstream.");
-
         setTrackMuteSolo(apvts, 0, true, false);
         const float mixerMutedPeak = renderMixedPeak();
         expect(mixerMutedPeak < baselinePeak * 0.1f, "APVTS mute should silence the track at mixer stage.");

@@ -24,6 +24,7 @@ MixerEngine::MixerEngine()
 
 MixerEngine::~MixerEngine()
 {
+    cancelPendingUpdate();
     detachParameters();
 }
 
@@ -237,6 +238,32 @@ bool MixerEngine::isTrackAudible(size_t trackIndex, bool anySoloActive) const no
     return anySoloActive ? trackSoloed : !trackMuted;
 }
 
+MixerTrackUiState MixerEngine::getTrackUiState(size_t trackIndex) const noexcept
+{
+    MixerTrackUiState state;
+    state.trackIndex = trackIndex;
+
+    if (trackIndex >= Config::NUM_TRACKS)
+    {
+        state.audible = false;
+        return state;
+    }
+
+    state.audible = isTrackAudible(trackIndex);
+
+    return state;
+}
+
+void MixerEngine::addListener(Listener* listener)
+{
+    listeners.add(listener);
+}
+
+void MixerEngine::removeListener(Listener* listener)
+{
+    listeners.remove(listener);
+}
+
 float MixerEngine::getLastVolDb(size_t track) const
 {
     if (track >= Config::NUM_TRACKS)
@@ -259,8 +286,35 @@ bool MixerEngine::getIsAnyTrackSoloed() const noexcept
 void MixerEngine::parameterChanged(const juce::String& parameterID, float newValue)
 {
     juce::ignoreUnused(newValue);
-    if (parameterID.endsWith("_Solo"))
+
+    const bool isSoloParam = parameterID.endsWith("_Solo");
+    if (!isSoloParam && !parameterID.endsWith("_Mute"))
+        return;
+
+    if (isSoloParam)
         refreshAnySoloStateFromParams();
+
+    if (juce::MessageManager::existsAndIsCurrentThread())
+        sendTrackUiStateNotifications();
+    else
+        triggerAsyncUpdate();
+}
+
+void MixerEngine::handleAsyncUpdate()
+{
+    sendTrackUiStateNotifications();
+}
+
+void MixerEngine::sendTrackUiStateNotifications()
+{
+    for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
+    {
+        const auto state = getTrackUiState(i);
+        listeners.call([&state](Listener& listener)
+        {
+            listener.mixerTrackUiStateChanged(state);
+        });
+    }
 }
 
 void MixerEngine::refreshAnySoloStateFromParams() noexcept

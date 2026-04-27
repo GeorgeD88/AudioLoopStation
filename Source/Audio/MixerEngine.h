@@ -8,11 +8,26 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
+#include <juce_events/juce_events.h>
 
 #include "../Utils/Config.h"
 
-class MixerEngine : private juce::AudioProcessorValueTreeState::Listener {
+struct MixerTrackUiState
+{
+    size_t trackIndex = 0;
+    bool audible = true;
+};
+
+class MixerEngine : private juce::AudioProcessorValueTreeState::Listener,
+                    private juce::AsyncUpdater {
 public:
+    class Listener
+    {
+    public:
+        virtual ~Listener() = default;
+        virtual void mixerTrackUiStateChanged(const MixerTrackUiState& state) = 0;
+    };
+
     static constexpr float kDefaultHeadroomScale = 0.25f;
 
     MixerEngine();
@@ -25,6 +40,9 @@ public:
     void process(const std::vector<juce::AudioBuffer<float>*>& inputTracks,
                  juce::AudioBuffer<float>& masterOutput);
     bool isTrackAudible(size_t trackIndex) const noexcept;
+    MixerTrackUiState getTrackUiState(size_t trackIndex) const noexcept;
+    void addListener(Listener* listener);
+    void removeListener(Listener* listener);
     float getLastVolDb(size_t track) const;
     float getLastPan(size_t track) const;
     bool getIsAnyTrackSoloed() const noexcept;
@@ -54,12 +72,15 @@ private:
     // Optional shared clock from SyncEngine/AudioProcessor.
     std::atomic<std::int64_t>* globalSampleCounter = nullptr;
     juce::AudioProcessorValueTreeState* attachedApvts = nullptr;
+    juce::ListenerList<Listener> listeners;
 
     void copyTrackIntoWorkingBuffer(size_t trackIndex,
                                     const juce::AudioBuffer<float>* sourceTrack,
                                     int numSamples,
                                     std::int64_t blockStartSample);
     void parameterChanged(const juce::String& parameterID, float newValue) override;
+    void handleAsyncUpdate() override;
+    void sendTrackUiStateNotifications();
     void refreshAnySoloStateFromParams() noexcept;
     bool isTrackAudible(size_t trackIndex, bool anySoloActive) const noexcept;
 

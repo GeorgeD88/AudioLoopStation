@@ -3,17 +3,30 @@
 //==============================================================================
 TrackControlPanel::TrackControlPanel(AudioLoopStationAudioProcessor& processor,
                                      juce::AudioProcessorValueTreeState& apvtsRef)
-    : audioProcessor(processor), apvts(apvtsRef)
+    : audioProcessor(processor), apvts(apvtsRef), mixerEngine(processor.getMixerEngine())
 {
     for (size_t i = 0; i < Config::NUM_TRACKS; ++i)
     {
-        // trackStrips[i] = std::make_unique<TrackStripComponent>(i, audioProcessor, apvts);
-        // addAndMakeVisible(*trackStrips[i]);
+        trackStrips[i] = std::make_unique<TrackStripComponent>(static_cast<int>(i), audioProcessor, apvts);
+        trackStrips[i]->setMixerTrackUiState(mixerEngine.getTrackUiState(i));
+        addAndMakeVisible(*trackStrips[i]);
     }
+
+    mixerEngine.addListener(this);
 }
 
 TrackControlPanel::~TrackControlPanel()
 {
+    mixerEngine.removeListener(this);
+}
+
+void TrackControlPanel::mixerTrackUiStateChanged(const MixerTrackUiState& state)
+{
+    if (state.trackIndex >= trackStrips.size())
+        return;
+
+    if (auto& strip = trackStrips[state.trackIndex])
+        strip->setMixerTrackUiState(state);
 }
 
 void TrackControlPanel::paint(juce::Graphics& g)

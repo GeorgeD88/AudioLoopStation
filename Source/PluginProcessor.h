@@ -71,6 +71,10 @@ public:
     // APVTS for DAW parameter automation / MIDI mapping (Ableton Configure)
     juce::AudioProcessorValueTreeState apvts;
 
+    void startPlayback();
+    void stopPlayback();
+    bool isPlaying() const { return mIsPlaying.load(); }
+
 private:
     //==============================================================================
     // --- LOOP TRACKS ---
@@ -82,6 +86,7 @@ private:
     std::atomic<int> mPrimaryLoopLengthSamples { 0 };
     int mGlobalPlaybackPosition = 0;
     std::atomic<juce::int64> mGlobalTotalSamples { 0 };
+    std::atomic<bool> mIsPlaying { false };
 
     void calculateBpm(int lengthSamples, double sampleRate);
 

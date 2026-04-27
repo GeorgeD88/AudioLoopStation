@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Utils/Config.h"
 
 //==============================================================================
 AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
@@ -180,6 +181,7 @@ bool AudioLoopStationEditor::keyPressed(const juce::KeyPress& key)
     auto& apvts       = audioProcessor.apvts;
 
     // Keys 1–4: Start recording on empty track, or play/overdub if it has a loop
+    // SHIFT+1–4: mute / unmute the corresponding track
     for (int i = 0; i < Config::NUM_TRACKS; ++i)
     {
         const int digit = '1' + i;

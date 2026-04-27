@@ -506,6 +506,30 @@ void AudioLoopStationAudioProcessor::resetAllInternal()
     mGlobalPlaybackPosition = 0;
     mGlobalTotalSamples.store(0);
     mBpm.store(0.0);
+    mIsPlaying.store(false);
+}
+
+void AudioLoopStationAudioProcessor::startPlayback()
+{
+    for (auto& track : mTracks)
+    {
+        if (track != nullptr && track->hasLoop())
+            track->setPlaying();
+    }
+
+    mIsPlaying.store(true);
+}
+
+void AudioLoopStationAudioProcessor::stopPlayback()
+{
+    for (auto& track : mTracks)
+    {
+        if (track != nullptr)
+            track->stop();
+    }
+
+    mGlobalPlaybackPosition = 0;
+    mIsPlaying.store(false);
 }
 
 //==============================================================================

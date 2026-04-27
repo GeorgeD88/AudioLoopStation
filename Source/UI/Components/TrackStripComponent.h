@@ -3,20 +3,21 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../../PluginProcessor.h"
+#include "../../Audio/MixerEngine.h"
 
 //==============================================================================
 /** A single track's control strip - uses FlexBox for responsive layout */
-class TrackStripComponent final : public juce::Component,
-                            private juce::Timer
+class TrackStripComponent final : public juce::Component
 {
 public:
     TrackStripComponent(int trackIndex,
                         AudioLoopStationAudioProcessor& processor,
                         juce::AudioProcessorValueTreeState& apvts);
-    ~TrackStripComponent() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
+
+    void setMixerTrackUiState(const MixerTrackUiState& state);
 
 private:
     static juce::Colour getTrackColour(int index);
@@ -26,6 +27,7 @@ private:
     int trackIndex;
     AudioLoopStationAudioProcessor& audioProcessor;             // Store reference
     juce::AudioProcessorValueTreeState& apvts;
+    MixerTrackUiState currentMixerState;
 
     juce::Label trackLabel;
     juce::Slider volumeSlider;

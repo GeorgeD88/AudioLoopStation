@@ -4,12 +4,10 @@
 
 #pragma once
 #include "LoopTrack.h"
-#include "LoopManager.h"
 #include "AlsFormat.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_data_structures/juce_data_structures.h"
-#include "../Utils/TrackConfig.h"
 
 /**
  * Handles playback from file and storage
@@ -27,12 +25,14 @@ public:
 
     // === Saving and loading projects ===
     bool saveProject(const juce::File& destination,
-                     const LoopManager& loopManager,
-                     const SyncEngine& syncEngine);
+                     const std::vector<std::unique_ptr<LoopTrack>>& tracks,
+                     double sampleRate,
+                     float bpm);
 
     bool loadProject(const juce::File& source,
-                     LoopManager& loopManager,
-                     SyncEngine& syncEngine);
+                     std::vector<std::unique_ptr<LoopTrack>>& tracks,
+                     double sampleRate,
+                     float bpm);
 
     static juce::File getDefaultAudioFolder();
     static juce::File getDefaultProjectFolder();
@@ -40,8 +40,9 @@ public:
 private:
     juce::AudioFormatManager formatManager;     // Save only SamplePlayer handles load and play
 
-    bool writeTrackToStream(juce::OutputStream& stream, const LoopTrack& track);
-    bool readTrackFromStream(juce::InputStream& stream, LoopTrack& track);
+
+    static bool writeTrackToStream(juce::OutputStream& stream, const LoopTrack& track);
+    static bool readTrackFromStream(juce::InputStream& stream, LoopTrack& track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopFileHandler)
 };

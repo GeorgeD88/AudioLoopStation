@@ -2,26 +2,24 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "TrackStripComponent.h"
-#include "../../Utils/TrackConfig.h"
-
-class AudioLoopStationAudioProcessor;
+#include "../../Utils/Config.h"
+#include "../../PluginProcessor.h"
 
 //==============================================================================
-class TrackControlPanel final : public juce::Component,
-                                 private juce::Timer
+class TrackControlPanel final : public juce::Component
 {
 public:
-    explicit TrackControlPanel(AudioLoopStationAudioProcessor& processor);
+    explicit TrackControlPanel(AudioLoopStationAudioProcessor& processor,
+                               juce::AudioProcessorValueTreeState& apvts);
     ~TrackControlPanel() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
 
 private:
-    void timerCallback() override;
-
-    std::array<std::unique_ptr<TrackStripComponent>, TrackConfig::MAX_TRACKS> trackStrips;
+    AudioLoopStationAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& apvts;
+    std::array<std::unique_ptr<TrackStripComponent>, Config::NUM_TRACKS> trackStrips;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TrackControlPanel)
 };

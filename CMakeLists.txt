@@ -27,17 +27,6 @@ CPMAddPackage(
         GIT_TAG origin/master
 )
 
-# Tells CMake to download the Gin library automatically
-CPMAddPackage(
-        NAME gin
-        GITHUB_REPOSITORY figbug/Gin
-        GIT_TAG master
-        DOWNLOAD_ONLY YES  # This stops the "duplicate target" error
-)
-
-# Tell CMake where the Gin modules are (Required for the Gin modules below)
-add_subdirectory(${gin_SOURCE_DIR}/modules gin_modules)
-
 # Make sure you include any new source files here
 set(SourceFiles
         Source/PluginEditor.cpp                                         # Wrapper for UI
@@ -47,19 +36,21 @@ set(SourceFiles
 
         # Audio - Seperated audio data here (PluginProcessor Related)
         # Track Storage - like an audio tape
-        Source/Audio/LoopManager.cpp                                    # Sync Logic - the window that surrounds the track section
-        Source/Audio/LoopManager.h
+        # Sync Logic - the window that surrounds the track section
         Source/Audio/LoopTrack.cpp                                      # Like a track in a DAW - where recording goes, takes input/DSP, and sends output
         Source/Audio/LoopTrack.h
         Source/Audio/MixerEngine.cpp                                    # The mixing console and master section - controls gain and levels
         Source/Audio/MixerEngine.h
-        Source/Audio/SyncEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
+        Source/Audio/LoopManager.h
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
         Source/UI/MainComponent.h
+        Source/UI/CustomLookAndFeel.h
         # UI - Subcomponents
+        Source/UI/Components/TrackComponent.cpp
+        Source/UI/Components/TrackComponent.h
         Source/UI/Components/TransportComponent.cpp
         Source/UI/Components/TransportComponent.h
         Source/UI/Components/TrackStripComponent.cpp
@@ -74,15 +65,16 @@ set(SourceFiles
         # Tests - cmake target not needed
 
         # Utiities - helpers, configs, and constants in /Utils
-        Source/Utils/TrackConfig.h                                      # Old config file
+        # Old config file
         Source/Utils/Config.h                                           # Reconfigured config file
+        Source/Utils/DebugLogger.h
 
 )
 
 # Change these to your own preferences
 juce_add_plugin(${PROJECT_NAME}
         COMPANY_NAME CS461_F25
-        IS_SYNTH TRUE
+        IS_SYNTH FALSE
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE
@@ -109,6 +101,9 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
+# Gin modules
+add_subdirectory(modules/gin/modules)
+
 # JUCE libraries to bring into our project
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
@@ -131,8 +126,6 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         gin
         gin_dsp
-        gin_gui
-        gin_plugin
 )
 
 # tiny console test runner (separate from the plugin)
@@ -144,19 +137,13 @@ target_sources(AudioLoopStation_Tests
         PRIVATE
         Source/Tests/TestRunner.cpp
         Source/Tests/MixerTests.cpp
-        Source/Tests/LoopManagerMixerIntegrationTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
-        Source/Tests/CircularBufferTests.cpp
         Source/Tests/LoopTrackTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
-        Source/Audio/CircularBuffer.cpp
-        Source/Audio/LoopManager.cpp
-        Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp
         Source/Audio/LoopTrack.h
-        Source/Audio/SyncEngine.h
-        Source/Utils/TrackConfig.h
+        Source/Utils/Config.h
 )
 
 # Add include paths for Audio headers

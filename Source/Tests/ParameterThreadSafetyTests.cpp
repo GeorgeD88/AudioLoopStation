@@ -8,7 +8,7 @@
 #include <thread>
 #include <chrono>
 
-#include "../Utils/TrackConfig.h"
+#include "../Utils/Config.h"
 
 //==============================================================================
 /** Minimal processor with the same APVTS parameter layout as AudioLoopStation */
@@ -50,7 +50,7 @@ private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
-        for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+        for (int i = 0; i < Config::NUM_TRACKS; ++i)
         {
             auto prefix = "Track" + juce::String(i + 1) + "_";
             layout.add(std::make_unique<juce::AudioParameterFloat>(
@@ -110,7 +110,7 @@ public:
             float v = 0.0f;
             while (!stopFlag.load())
             {
-                for (int t = 0; t < TrackConfig::MAX_TRACKS; ++t)
+                for (int t = 0; t < Config::NUM_TRACKS; ++t)
                 {
                     auto prefix = "Track" + juce::String(t + 1) + "_";
                     if (auto* vp = apvts.getRawParameterValue(prefix + "Volume"))
@@ -136,7 +136,7 @@ public:
 
                 while (!stopFlag.load())
                 {
-                    for (int t = 0; t < TrackConfig::MAX_TRACKS; ++t)
+                    for (int t = 0; t < Config::NUM_TRACKS; ++t)
                     {
                         auto prefix = "Track" + juce::String(t + 1) + "_";
                         if (auto* vp = apvts.getRawParameterValue(prefix + "Volume"))
@@ -170,7 +170,7 @@ public:
 
         beginTest("All track parameters exist and are accessible");
 
-        for (int t = 0; t < TrackConfig::MAX_TRACKS; ++t)
+        for (int t = 0; t < Config::NUM_TRACKS; ++t)
         {
             auto prefix = "Track" + juce::String(t + 1) + "_";
             expect(apvts.getRawParameterValue(prefix + "Volume") != nullptr, "Volume param exists");

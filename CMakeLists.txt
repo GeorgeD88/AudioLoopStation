@@ -141,6 +141,8 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/LoopTrackTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
+        Source/Audio/LoopManager.cpp
+        Source/Audio/LoopManager.h
         Source/Audio/LoopTrack.cpp
         Source/Audio/LoopTrack.h
         Source/Utils/Config.h

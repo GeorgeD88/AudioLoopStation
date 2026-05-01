@@ -205,8 +205,6 @@ juce::File LoopFileHandler::getDefaultProjectFolder() {
     .getChildFile("AudioLoopStation").getChildFile("Projects");
 }
 
-*/
-
 
 /* Before refactor
 
@@ -438,3 +436,5 @@ juce::File LoopFileHandler::getDefaultProjectFolder() {
     return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
     .getChildFile("AudioLoopStation").getChildFile("Projects");
 }
+
+*/

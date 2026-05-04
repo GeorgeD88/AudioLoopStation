@@ -73,8 +73,6 @@ bool LoopFileHandler::writeTrackToStream(juce::OutputStream &stream, const LoopT
     // Write track settings
     // stream.writeFloat(track.getCurrentVolumeDb());
     // stream.writeFloat(track.getCurrentPan());
-    // stream.writeBool(track.isMuted()); *rewrite*
-    // stream.writeBool(track.isSoloed());
     // stream.writeBool(track.isReversed());
     // stream.writeInt(track.getSlipOffset());
 
@@ -99,16 +97,12 @@ bool LoopFileHandler::readTrackFromStream(juce::InputStream &stream, LoopTrack &
     // Read track settings
     // float volume = stream.readFloat();
     // float pan = stream.readFloat();
-    // bool muted = stream.readBool();
-    // bool soloed = stream.readBool();
     // bool reversed = stream.readBool();
     // int offset = stream.readInt();
 
     // Apply settings
     // track.setVolumeDb(volume);
     // track.setPan(pan);
-    // track.setSolo(soloed);
-    // track.setMute(muted);
     // track.setReverse(reversed);
     // track.setSlip(offset);
 
@@ -247,8 +241,6 @@ bool LoopFileHandler::saveProject(const juce::File &destination, const LoopManag
         t->setProperty("index", static_cast<int>(i));
         t->setProperty("volumeDb", track->getCurrentVolumeDb());
         t->setProperty("pan", track->getCurrentPan());
-        t->setProperty("mute", track->isMuted());
-        t->setProperty("solo", track->isSoloed());
         t->setProperty("reverse", track->isReversed());
         t->setProperty("slipOffset", track->getSlipOffset());
         t->setProperty("loopLengthSamples", track->getLoopLengthSamples());
@@ -384,8 +376,6 @@ bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopMan
         // Apply DSP parameters
         track->setVolumeDb(static_cast<float>(static_cast<double>(tVar.getProperty("volumeDb", TrackConfig::DEFAULT_VOLUME_DB))));
         track->setPan(static_cast<float>(static_cast<double>(tVar.getProperty("pan", TrackConfig::DEFAULT_PAN))));
-        track->setMute(static_cast<bool>(tVar.getProperty("mute", false)));
-        track->setSolo(static_cast<bool>(tVar.getProperty("solo", false)));
         track->setReverse(static_cast<bool>(tVar.getProperty("reverse", false)));
         track->setSlip(static_cast<int>(tVar.getProperty("slipOffset", 0)));
 
@@ -421,4 +411,30 @@ bool LoopFileHandler::loadProject(const juce::File &source, LoopManager &loopMan
     return true;
 }
 
- */
+juce::StringArray LoopFileHandler::getSupportedExtensions() {
+    return {"wav", "aiff", "aif", "flac", "ogg" };
+}
+
+juce::String LoopFileHandler::getSupportedExtString() {
+    auto extensions = getSupportedExtensions();
+    juce::String wildcard;
+
+    for (auto& ext : extensions)
+    {
+        if (wildcard.isNotEmpty())
+            wildcard += ";";
+        wildcard += "*." + ext;
+    }
+    return wildcard;
+}
+
+juce::File LoopFileHandler::getDefaultAudioFolder() {
+    return juce::File::getSpecialLocation(juce::File::userMusicDirectory);
+}
+
+juce::File LoopFileHandler::getDefaultProjectFolder() {
+    return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+    .getChildFile("AudioLoopStation").getChildFile("Projects");
+}
+
+*/

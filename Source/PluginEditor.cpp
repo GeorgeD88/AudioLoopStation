@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Utils/Config.h"
 
 //==============================================================================
 AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& p)
@@ -112,21 +113,23 @@ bool AudioLoopStationEditor::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
-    auto& loopManager = audioProcessor.getLoopManager();
-    auto& apvts       = audioProcessor.getApvts();
+    auto& apvts = audioProcessor.apvts;
 
-    // Keys 1–4: arm / disarm the corresponding track
+    // Keys 1-4: toggle the matching record/play parameter
     // SHIFT+1–4: mute / unmute the corresponding track
-    for (int i = 0; i < TrackConfig::MAX_TRACKS; ++i)
+    for (int i = 0; i < Config::NUM_TRACKS; ++i)
     {
         const int digit = '1' + i;
 
         if (key == juce::KeyPress(digit))
         {
-            if (auto* track = loopManager.getTrack(static_cast<size_t>(i)))
+            const juce::String paramId = "Track" + juce::String(i + 1) + "_Record";
+            if (auto* param = apvts.getParameter(paramId))
             {
-                const bool nowArmed = !track->isArmed();
-                track->armForRecording(nowArmed);
+                const float toggled = param->getValue() > 0.5f ? 0.0f : 1.0f;
+                param->beginChangeGesture();
+                param->setValueNotifyingHost(toggled);
+                param->endChangeGesture();
             }
             return true;
         }

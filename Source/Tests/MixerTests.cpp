@@ -123,6 +123,17 @@ static void setTrackMuteSolo(juce::AudioProcessorValueTreeState& apvts, int trac
         soloParam->setValueNotifyingHost(solo ? 1.0f : 0.0f);
 }
 
+class CapturingMixerListener final : public MixerEngine::Listener
+{
+public:
+    void mixerTrackUiStateChanged(const MixerTrackUiState& state) override
+    {
+        states.push_back(state);
+    }
+
+    std::vector<MixerTrackUiState> states;
+};
+
 class MixerTask31Tests : public juce::UnitTest
 {
 public:
@@ -463,6 +474,45 @@ public:
 };
 
 static MixerTask32Tests mixerTask32Tests;
+
+class MixerTask47Tests : public juce::UnitTest
+{
+public:
+    MixerTask47Tests() : juce::UnitTest("MixerTask47Tests") {}
+
+    void runTest() override
+    {
+        beginTest("mixer publishes track UI audibility state");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+
+            CapturingMixerListener listener;
+            mixer.addListener(&listener);
+
+            setTrackMuteSolo(apvts, 0, true, false);
+            expect(!mixer.getTrackUiState(0).audible,
+                   "Muted track should not be effectively audible when no solo is active.");
+
+            listener.states.clear();
+            setTrackMuteSolo(apvts, 1, false, true);
+
+            expect(listener.states.size() >= 2,
+                   "Solo changes should publish mixer UI state.");
+            expect(listener.states[1].trackIndex == 1 && listener.states[1].audible,
+                   "Solo changes should publish the soloed track as audible.");
+            expect(listener.states[0].trackIndex == 0 && !listener.states[0].audible,
+                   "Solo changes should publish other tracks as not audible.");
+
+            mixer.removeListener(&listener);
+        }
+    }
+};
+
+static MixerTask47Tests mixerTask47Tests;
 
 class MixerTask34Tests : public juce::UnitTest
 {

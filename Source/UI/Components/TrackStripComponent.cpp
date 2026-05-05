@@ -22,12 +22,6 @@ TrackStripComponent::TrackStripComponent(int trackIdx,
     apvts(apvtsRef)
 {
     setupControls();
-    startTimerHz(30);
-}
-
-TrackStripComponent::~TrackStripComponent()
-{
-    stopTimer();
 }
 
 void TrackStripComponent::setupControls()
@@ -84,15 +78,21 @@ void TrackStripComponent::setupControls()
 void TrackStripComponent::paint(juce::Graphics& g)
 {
     auto colour = getTrackColour(trackIndex);
-    g.fillAll(colour.withAlpha(0.15f));
+    auto fillColour = currentMixerState.audible ? colour.withAlpha(0.15f)
+                                                : juce::Colours::dimgrey.withAlpha(0.45f);
+    auto headerColour = currentMixerState.audible ? colour.withAlpha(0.4f)
+                                                  : juce::Colours::grey.withAlpha(0.55f);
+    auto borderColour = currentMixerState.audible ? colour.withAlpha(0.6f)
+                                                  : juce::Colours::lightgrey.withAlpha(0.7f);
+
+    g.fillAll(fillColour);
 
     // Colored header bar
     auto headerBounds = getLocalBounds().removeFromTop(20);
-    g.setColour(colour.withAlpha(0.4f));
+    g.setColour(headerColour);
     g.fillRect(headerBounds);
 
-    // Colored border
-    g.setColour(colour.withAlpha(0.6f));
+    g.setColour(borderColour);
     g.drawRect(getLocalBounds(), 1);
 }
 
@@ -135,4 +135,13 @@ void TrackStripComponent::resized()
 
     // 3. Perform layout on the remaining bounds (already reduced by removeFromTop).
     flexBox.performLayout(bounds.reduced(5));
+}
+
+void TrackStripComponent::setMixerTrackUiState(const MixerTrackUiState& state)
+{
+    if (state.trackIndex != static_cast<size_t>(trackIndex))
+        return;
+
+    currentMixerState = state;
+    repaint();
 }

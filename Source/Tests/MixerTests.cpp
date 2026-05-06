@@ -609,3 +609,105 @@ public:
 };
 
 static MixerTask34Tests mixerTask34Tests;
+
+class MixerTask49Tests : public juce::UnitTest
+{
+public:
+    MixerTask49Tests() : juce::UnitTest("MixerTask49Tests") {}
+
+    void runTest() override
+    {
+        beginTest("master limiter stays stable with four loud tracks");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 128);
+
+            std::vector<juce::AudioBuffer<float>> tracks;
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            tracks.reserve(Config::NUM_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
+
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
+            {
+                setTrackParams(apvts, i, 1.0f, 0.0f);
+                tracks.emplace_back(2, 128);
+
+                for (int ch = 0; ch < 2; ++ch)
+                {
+                    auto* data = tracks.back().getWritePointer(ch);
+                    for (int s = 0; s < 128; ++s)
+                        data[s] = (s % 2 == 0) ? 8.0f : -8.0f;
+                }
+
+                inputs.push_back(&tracks.back());
+            }
+
+            juce::AudioBuffer<float> output(2, 128);
+            output.clear();
+            mixer.process(inputs, output);
+
+            bool allSamplesFinite = true;
+            float maxValue = -1000.0f;
+            float minValue = 1000.0f;
+
+            for (int ch = 0; ch < output.getNumChannels(); ++ch)
+            {
+                for (int s = 0; s < output.getNumSamples(); ++s)
+                {
+                    const float sample = output.getSample(ch, s);
+                    allSamplesFinite = allSamplesFinite && std::isfinite(sample);
+                    maxValue = juce::jmax(maxValue, sample);
+                    minValue = juce::jmin(minValue, sample);
+                }
+            }
+
+            expect(allSamplesFinite, "Limiter output should not be NaN or inf.");
+            expect(maxValue <= 1.0001f, "Limiter should not go above +1.0.");
+            expect(minValue >= -1.0001f, "Limiter should not go below -1.0.");
+            expect(maxValue >= 0.999f, "Hot positive samples should clip at the ceiling.");
+            expect(minValue <= -0.999f, "Hot negative samples should clip at the floor.");
+        }
+
+        beginTest("master limiter clips immediately");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 16);
+
+            std::vector<juce::AudioBuffer<float>> tracks;
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            tracks.reserve(Config::NUM_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
+
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
+            {
+                setTrackParams(apvts, i, 1.0f, 0.0f);
+                tracks.emplace_back(2, 16);
+                tracks.back().clear();
+                tracks.back().setSample(0, 0, 8.0f);
+                tracks.back().setSample(1, 0, 8.0f);
+                inputs.push_back(&tracks.back());
+            }
+
+            juce::AudioBuffer<float> output(2, 16);
+            output.clear();
+            mixer.process(inputs, output);
+
+            expectWithinAbsoluteError(output.getSample(0, 0), 1.0f, 0.0001f,
+                                      "First loud sample should clip right away.");
+            expectWithinAbsoluteError(output.getSample(1, 0), 1.0f, 0.0001f,
+                                      "Right channel should also clip right away.");
+            expectWithinAbsoluteError(output.getSample(0, 1), 0.0f, 0.0001f,
+                                      "Limiter should not delay the clipped sample.");
+        }
+    }
+};
+
+static MixerTask49Tests mixerTask49Tests;

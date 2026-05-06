@@ -610,10 +610,10 @@ public:
 
 static MixerTask34Tests mixerTask34Tests;
 
-class MixerTask49Tests : public juce::UnitTest
+class MasterLimiterStressTests : public juce::UnitTest
 {
 public:
-    MixerTask49Tests() : juce::UnitTest("MixerTask49Tests") {}
+    MasterLimiterStressTests() : juce::UnitTest("MasterLimiterStressTests") {}
 
     void runTest() override
     {
@@ -710,4 +710,4 @@ public:
     }
 };
 
-static MixerTask49Tests mixerTask49Tests;
+static MasterLimiterStressTests masterLimiterStressTests;

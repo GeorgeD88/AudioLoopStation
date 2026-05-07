@@ -26,6 +26,10 @@ namespace Config {
     constexpr int DEFAULT_BUFFER_SIZE = 256;
     constexpr int INVALID_TRACK_ID = -1;
 
+    /** AUTO-SAVE */
+    constexpr int AUTO_SAVE_INTERVAL_SECS = 30;         // Seconds of stopped transport before auto-saving
+    static constexpr const char* AUTO_SAVE_FILENAME = "autosave.als";
+
     /** MIDI CLOCK SETTINGS */
     namespace MidiClock {
         constexpr int PPQN = 24;                        // Pulses per quarter note

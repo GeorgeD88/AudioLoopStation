@@ -64,10 +64,56 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
     mParamBounce          = apvts.getRawParameterValue("BounceBack");
     mParamReset           = apvts.getRawParameterValue("ResetAll");
     mParamMidiSyncChannel = apvts.getRawParameterValue("MidiSyncChannel");
+
+    startTimerHz(1);
 }
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
+    stopTimer();
+}
+
+//==============================================================================
+void AudioLoopStationAudioProcessor::timerCallback()
+{
+    // Reset the countdown whenever the transport is running – only save while stopped.
+    if (isPlaying())
+    {
+        mAutoSaveTickCount = 0;
+        return;
+    }
+
+    ++mAutoSaveTickCount;
+    if (mAutoSaveTickCount < Config::AUTO_SAVE_INTERVAL_SECS)
+        return;
+
+    mAutoSaveTickCount = 0;
+
+    // Skip if there is nothing worth saving.
+    bool hasContent = false;
+    for (const auto& track : mTracks)
+    {
+        if (track && track->hasLoop())
+        {
+            hasContent = true;
+            break;
+        }
+    }
+    if (!hasContent)
+        return;
+
+    // Ensure the auto-save directory exists, then save.
+    auto folder = LoopFileHandler::getDefaultProjectFolder();
+    folder.createDirectory();
+    auto dest = folder.getChildFile(Config::AUTO_SAVE_FILENAME);
+
+    const bool ok = fileHandler.saveProject(dest, mTracks,
+                                            getSampleRate(),
+                                            static_cast<float>(getBpm()));
+    if (ok)
+        DBG("Auto-save: saved to " + dest.getFullPathName());
+    else
+        DBG("Auto-save: save failed");
 }
 
 //==============================================================================

@@ -2,18 +2,28 @@
 
 //==============================================================================
 MainComponent::MainComponent(AudioLoopStationAudioProcessor& processor)
-    : audioProcessor(processor),
+    : audioProcessor(processor)
       //waveformDisplay(processor.getFormatManager()),
       //vuMeter([&proc = processor] { return proc.getOutputLevel(); }),
-      trackControlPanel(processor, processor.apvts)
-{
+      //trackControlPanel(processor, processor.apvts)
+  {
+    auto &tracks = audioProcessor.getTracks();
+    int trackId = 0;
+    for (auto &track : tracks)
+    {
+        auto component = std::make_unique<TrackComponent>(audioProcessor, *track, trackId);
+
+        addAndMakeVisible(*component);
+        trackComponents.push_back(std::move(component));
+        ++trackId;
+    }
     // addAndMakeVisible(waveformDisplay);
     // addAndMakeVisible(vuMeter);
-    addAndMakeVisible(transportComponent);
-    addAndMakeVisible(trackControlPanel);
+    // addAndMakeVisible(transportComponent);
+    // addAndMakeVisible(trackControlPanel);
 
     // Connect transport to processor
-    transportComponent.setAudioProcessor(&audioProcessor);
+    // transportComponent.setAudioProcessor(&audioProcessor);
 }
 
 void MainComponent::setWaveformFile(const juce::File& file)
@@ -38,6 +48,15 @@ void MainComponent::paint (juce::Graphics& g)
 
 void MainComponent::resized()
 {
+    auto area = getLocalBounds();
+    if (trackComponents.empty()) return;
+
+    int trackHeight = (area.getHeight() - 8) / static_cast<int>(trackComponents.size());
+    auto tracksArea = area.reduced(8, 0);
+
+    for (auto& component : trackComponents)
+        component->setBounds(tracksArea.removeFromTop(trackHeight).reduced(0, 2));
+    /*
     juce::FlexBox flexBox;
     flexBox.flexDirection = juce::FlexBox::Direction::column;
     flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
@@ -67,4 +86,5 @@ void MainComponent::resized()
                           .withMaxHeight(100.0f));
 
     flexBox.performLayout(getLocalBounds());
+    */
 }

@@ -77,7 +77,25 @@ AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 void AudioLoopStationAudioProcessor::timerCallback()
 {
     // Reset the countdown whenever the transport is running – only save while stopped.
-    if (isPlaying())
+    // Also check individual track states, since handleParameterChanges() can move
+    // tracks into Recording/Playing/Overdubbing without updating mIsPlaying.
+    bool anyTrackActive = false;
+    for (const auto& t : mTracks)
+    {
+        if (t)
+        {
+            const auto s = t->getState();
+            if (s == LoopTrack::State::Recording  ||
+                s == LoopTrack::State::Playing     ||
+                s == LoopTrack::State::Overdubbing)
+            {
+                anyTrackActive = true;
+                break;
+            }
+        }
+    }
+
+    if (isPlaying() || anyTrackActive)
     {
         mAutoSaveTickCount = 0;
         return;

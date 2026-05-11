@@ -610,6 +610,69 @@ public:
 
 static MixerTask34Tests mixerTask34Tests;
 
+class MixerMeteringTests : public juce::UnitTest
+{
+public:
+    MixerMeteringTests() : juce::UnitTest("MixerMeteringTests") {}
+
+    void runTest() override
+    {
+        beginTest("track peak level updates from processed audio");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 64);
+
+            juce::AudioBuffer<float> track(2, 64);
+            fillBuffer(track, 0.5f);
+
+            std::vector<juce::AudioBuffer<float>*> inputs { &track };
+            juce::AudioBuffer<float> output(2, 64);
+            output.clear();
+            mixer.process(inputs, output);
+
+            expect(mixer.getTrackPeakLevel(0) > 0.0f, "Track meter should show level after audio is processed.");
+            expectWithinAbsoluteError(mixer.getTrackPeakLevel(1), 0.0f, 0.0001f,
+                                      "Track without input should stay at zero.");
+        }
+
+        beginTest("muted track reports zero level");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 64);
+
+            setTrackMuteSolo(apvts, 0, true, false);
+
+            juce::AudioBuffer<float> track(2, 64);
+            fillBuffer(track, 0.5f);
+
+            std::vector<juce::AudioBuffer<float>*> inputs { &track };
+            juce::AudioBuffer<float> output(2, 64);
+            output.clear();
+            mixer.process(inputs, output);
+
+            expectWithinAbsoluteError(mixer.getTrackPeakLevel(0), 0.0f, 0.0001f,
+                                      "Muted track meter should read zero.");
+        }
+
+        beginTest("invalid track meter index returns zero");
+        {
+            MixerEngine mixer;
+            expectWithinAbsoluteError(mixer.getTrackPeakLevel(Config::NUM_TRACKS), 0.0f, 0.0001f,
+                                      "Invalid track meter index should be safe.");
+        }
+    }
+};
+
+static MixerMeteringTests mixerMeteringTests;
+
 class MasterLimiterStressTests : public juce::UnitTest
 {
 public:

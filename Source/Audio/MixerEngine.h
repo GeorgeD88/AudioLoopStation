@@ -45,6 +45,7 @@ public:
     void removeListener(Listener* listener);
     float getLastVolDb(size_t track) const;
     float getLastPan(size_t track) const;
+    float getTrackPeakLevel(size_t trackIndex) const noexcept;
     bool getIsAnyTrackSoloed() const noexcept;
 
 private:
@@ -59,6 +60,7 @@ private:
     std::array<juce::dsp::Panner<float>, Config::NUM_TRACKS> panners;
     std::array<float, Config::NUM_TRACKS> lastVolDb{};
     std::array<float, Config::NUM_TRACKS> lastPan{};
+    std::array<std::atomic<float>, Config::NUM_TRACKS> trackPeakLevels{};
 
     // Scratch buffers used each block before summing into master.
     std::array<juce::AudioBuffer<float>, Config::NUM_TRACKS> trackWorkingBuffers{};

@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../../Audio/LoopTrack.h"
+#include "VUMeterComponent.h"
 
 class AudioLoopStationAudioProcessor;
 
@@ -34,6 +35,7 @@ private:
     juce::Slider     volumeSlider;
     juce::Slider     panSlider;
     juce::ComboBox   mOutputSelector;
+    std::unique_ptr<VUMeterComponent> levelMeter;
 
     void updateButtonVisuals();
 

@@ -13,7 +13,7 @@
 class AudioLoopStationAudioProcessor : public juce::AudioProcessor
 {
 public:
-    static constexpr int NUM_TRACKS = 6;
+    static constexpr int NUM_TRACKS = Config::NUM_TRACKS;
     std::atomic<bool> mIsRecording{ false };
     //==============================================================================
     AudioLoopStationAudioProcessor();

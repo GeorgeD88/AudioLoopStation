@@ -51,7 +51,7 @@ AudioLoopStationEditor::AudioLoopStationEditor (AudioLoopStationAudioProcessor& 
         midiSyncChannelSelector.addItem("CH " + juce::String(ch), ch);
 
     mMidiSyncChannelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-            audioProcessor.apvts, "midi_sync_channel", midiSyncChannelSelector);
+            audioProcessor.apvts, "MidiSyncChannel", midiSyncChannelSelector);
 
     setSize (1200, 900);
     startTimerHz(30);
@@ -224,7 +224,7 @@ bool AudioLoopStationEditor::keyPressed(const juce::KeyPress& key)
                 if (track)
                 {
                     // Toggle mute via APVTS parameter
-                    const juce::String paramId = "mute_" + juce::String(i);
+                    const juce::String paramId = "Track" + juce::String(i + 1) + "_Mute";
                     if (auto* param = apvts.getParameter(paramId))
                     {
                         const float toggled = param->getValue() > 0.5f ? 0.0f : 1.0f;

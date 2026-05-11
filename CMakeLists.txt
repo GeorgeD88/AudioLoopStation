@@ -168,6 +168,4 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_audio_processors
         juce::juce_audio_formats
         juce::juce_dsp
-        gin
-        gin_dsp
 )

@@ -31,6 +31,7 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
 
     // Custom functions
+    // Custom functions - may be refactored
     void openButtonClicked();
 
 private:

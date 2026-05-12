@@ -56,7 +56,7 @@ TrackComponent::TrackComponent(AudioLoopStationAudioProcessor& p, LoopTrack& tra
     mUndoAttachment      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Undo", undoButton);
     mAfterLoopAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Afterloop", afterLoopButton);
     mOutSelectAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, prefix + "OutSelect", mOutputSelector);
-    mResampleAttachment  = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "Resample", fxReplaceButton);
+    mResampleAttachment  = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, prefix + "FxReplace", fxReplaceButton);
     startTimerHz(30);
 }
 

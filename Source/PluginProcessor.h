@@ -10,11 +10,10 @@
 #include "Utils/DebugLogger.h"
 
 //==============================================================================
-class AudioLoopStationAudioProcessor : public juce::AudioProcessor,
-                                       private juce::Timer
+class AudioLoopStationAudioProcessor : public juce::AudioProcessor
 {
 public:
-    static constexpr int NUM_TRACKS = 6;
+    static constexpr int NUM_TRACKS = Config::NUM_TRACKS;
     std::atomic<bool> mIsRecording{ false };
     //==============================================================================
     AudioLoopStationAudioProcessor();
@@ -142,11 +141,6 @@ private:
 
     // Pre-allocated work buffer for bounce/afterloop operations
     juce::AudioBuffer<float> mWorkBuffer;
-
-    // --- Auto-save ---
-    LoopFileHandler fileHandler;
-    int mAutoSaveTickCount { 0 };
-    void timerCallback() override;
 
     // --- Deferred heavy operations (avoid audio thread overload) ---
     static constexpr int CROSSFADE_SAMPLES = 128;

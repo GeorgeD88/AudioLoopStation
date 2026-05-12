@@ -7,6 +7,7 @@
 #include "Components/WaveformDisplayComponent.h"
 #include "Components/VUMeterComponent.h"
 #include "CustomLookAndFeel.h"
+#include "Components/TrackComponent.h"
 
 //==============================================================================
 class MainComponent final : public juce::Component
@@ -24,10 +25,11 @@ public:
 
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
+    std::vector<std::unique_ptr<TrackComponent>> trackComponents;
     // WaveformDisplayComponent waveformDisplay;
     // VUMeterComponent vuMeter;
-    TransportComponent transportComponent;
-    TrackControlPanel trackControlPanel;
+    // TransportComponent transportComponent;
+    // TrackControlPanel trackControlPanel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

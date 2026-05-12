@@ -33,10 +33,6 @@ public:
     // Custom functions
     // Custom functions - may be refactored
     void openButtonClicked();
-    void playButtonClicked();
-    void stopButtonClicked();
-    void loopButtonChanged();
-    void updateTransportButtons();
 
 private:
     AudioLoopStationAudioProcessor& audioProcessor;
@@ -44,6 +40,7 @@ private:
 
     juce::TextButton resetButton { "RESET" };
     juce::TextButton bounceButton { "BOUNCE" };       // NOTE: sums active tracks into Track1 NOT a "PLAY ALL" button
+
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> mResetAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> mBounceAttachment;
 

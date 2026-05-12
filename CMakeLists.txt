@@ -35,13 +35,13 @@ set(SourceFiles
         Source/PluginProcessor.h
 
         # Audio - Seperated audio data here (PluginProcessor Related)
-        # Track Storage - like an audio tape
-        # Sync Logic - the window that surrounds the track section
+        Source/Audio/DebugLogger.h
         Source/Audio/LoopTrack.cpp                                      # Like a track in a DAW - where recording goes, takes input/DSP, and sends output
         Source/Audio/LoopTrack.h
         Source/Audio/MixerEngine.cpp                                    # The mixing console and master section - controls gain and levels
         Source/Audio/MixerEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
+
 
         # UI - separate graphics data here (PluginEditor related)
         Source/UI/MainComponent.cpp
@@ -168,6 +168,4 @@ target_link_libraries(AudioLoopStation_Tests
         juce::juce_audio_processors
         juce::juce_audio_formats
         juce::juce_dsp
-        gin
-        gin_dsp
 )

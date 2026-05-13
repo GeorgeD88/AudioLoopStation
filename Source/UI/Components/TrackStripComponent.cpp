@@ -32,6 +32,12 @@ void TrackStripComponent::setupControls()
     trackLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(trackLabel);
 
+    levelMeter = std::make_unique<VUMeterComponent>([this]
+    {
+        return audioProcessor.getMixerEngine().getTrackPeakLevel(static_cast<size_t>(trackIndex));
+    });
+    addAndMakeVisible(*levelMeter);
+
     // Volume slider
     volumeSlider.setSliderStyle(juce::Slider::LinearVertical);
     volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
@@ -113,6 +119,9 @@ void TrackStripComponent::resized()
     flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
     constexpr float margin = 2.0f;
+
+    if (levelMeter != nullptr)
+        flexBox.items.add(juce::FlexItem(*levelMeter).withHeight(14.0f).withMargin(margin));
 
     // volumeSlider
     flexBox.items.add(juce::FlexItem(volumeSlider).withFlex(1.0f).withMinHeight(60.0f).withMargin(margin));

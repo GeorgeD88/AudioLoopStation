@@ -28,6 +28,12 @@ TrackComponent::TrackComponent(AudioLoopStationAudioProcessor& p, LoopTrack& tra
     setupButton(muteButton);
     setupButton(soloButton);
 
+    levelMeter = std::make_unique<VUMeterComponent>([this]
+    {
+        return processor.getMixerEngine().getTrackPeakLevel(static_cast<size_t>(trackID));
+    });
+    addAndMakeVisible(*levelMeter);
+
     addAndMakeVisible(volumeSlider);
     volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
@@ -170,6 +176,11 @@ void TrackComponent::resized()
     muteButton.setBounds(r2.removeFromLeft(30));  r2.removeFromLeft(gp);
     soloButton.setBounds(r2.removeFromLeft(30));  r2.removeFromLeft(6);
     mOutputSelector.setBounds(r2.removeFromRight(110)); r2.removeFromRight(6);
+    if (levelMeter != nullptr)
+    {
+        levelMeter->setBounds(r2.removeFromLeft(70));
+        r2.removeFromLeft(6);
+    }
 
     // --- split remaining space: 70% volume, 30% pan ---
     auto volArea = r2.removeFromLeft(static_cast<int>(r2.getWidth() * 0.7f));

@@ -19,6 +19,7 @@ MixerEngine::MixerEngine()
         soloParams[i] = nullptr;
         
         volumeSmoothers[i].setCurrentAndTargetValue(1.0f);
+        trackPeakLevels[i].store(0.0f, std::memory_order_relaxed);
     }
 }
 
@@ -49,6 +50,7 @@ void MixerEngine::prepare(double sampleRateIn, int samplesPerBlock)
 
         trackWorkingBuffers[i].setSize(kStereoChannels, blockSize, false, false, true);
         trackWorkingBuffers[i].clear();
+        trackPeakLevels[i].store(0.0f, std::memory_order_relaxed);
     }
 }
 
@@ -177,7 +179,10 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
         lastPan[i] = pan;
 
         if (!isTrackAudible(i, anySoloActive))
+        {
+            trackPeakLevels[i].store(0.0f, std::memory_order_relaxed);
             continue;
+        }
 
         const juce::AudioBuffer<float>* sourceTrack =
             i < inputTracks.size() ? inputTracks[i] : nullptr;
@@ -200,6 +205,12 @@ void MixerEngine::process(const std::vector<juce::AudioBuffer<float>*>& inputTra
         juce::dsp::AudioBlock<float> block(workingBuffer);
         juce::dsp::ProcessContextReplacing<float> context(block);
         panners[i].process(context);
+
+        float peak = 0.0f;
+        for (int channel = 0; channel < workingBuffer.getNumChannels(); ++channel)
+            peak = juce::jmax(peak, workingBuffer.getMagnitude(channel, 0, numSamples));
+
+        trackPeakLevels[i].store(peak, std::memory_order_relaxed);
 
         const int channelsToSum = juce::jmin(masterOutput.getNumChannels(), workingBuffer.getNumChannels());
         for (int channel = 0; channel < channelsToSum; ++channel)
@@ -276,6 +287,14 @@ float MixerEngine::getLastPan(size_t track) const
     if (track >= Config::NUM_TRACKS)
         return 0.0f;
     return lastPan[track];
+}
+
+float MixerEngine::getTrackPeakLevel(size_t trackIndex) const noexcept
+{
+    if (trackIndex >= Config::NUM_TRACKS)
+        return 0.0f;
+
+    return trackPeakLevels[trackIndex].load(std::memory_order_relaxed);
 }
 
 bool MixerEngine::getIsAnyTrackSoloed() const noexcept

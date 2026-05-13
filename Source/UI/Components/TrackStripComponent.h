@@ -4,6 +4,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../../PluginProcessor.h"
 #include "../../Audio/MixerEngine.h"
+#include "VUMeterComponent.h"
 
 //==============================================================================
 /** A single track's control strip - uses FlexBox for responsive layout */
@@ -35,6 +36,7 @@ private:
     juce::TextButton muteButton;
     juce::TextButton soloButton;
     juce::TextButton clearButton;
+    std::unique_ptr<VUMeterComponent> levelMeter;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> volumeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttachment;

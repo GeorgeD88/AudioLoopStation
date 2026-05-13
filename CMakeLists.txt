@@ -138,6 +138,8 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/MixerTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
         Source/Tests/LoopTrackTests.cpp
+        Source/Tests/RecordPlaybackIntegrationTests.cpp
+        Source/PluginProcessor.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
         Source/Audio/LoopTrack.cpp
@@ -155,9 +157,16 @@ target_include_directories(AudioLoopStation_Tests
 # Disable GUI for tests
 target_compile_definitions(AudioLoopStation_Tests
         PRIVATE
+        ALS_TESTING
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_DISABLE_NATIVE_FILECHOOSERS=1
+        # JUCE plugin macros normally injected by juce_add_plugin()
+        JucePlugin_Name="AudioLoopStation"
+        JucePlugin_IsSynth=0
+        JucePlugin_IsMidiEffect=0
+        JucePlugin_WantsMidiInput=1
+        JucePlugin_ProducesMidiOutput=0
 )
 
 target_link_libraries(AudioLoopStation_Tests

@@ -64,10 +64,66 @@ AudioLoopStationAudioProcessor::AudioLoopStationAudioProcessor()
     mParamBounce          = apvts.getRawParameterValue("BounceBack");
     mParamReset           = apvts.getRawParameterValue("ResetAll");
     mParamMidiSyncChannel = apvts.getRawParameterValue("MidiSyncChannel");
+
+    startTimerHz(1);   // 1 Hz tick for auto-save countdown
 }
 
 AudioLoopStationAudioProcessor::~AudioLoopStationAudioProcessor()
 {
+    stopTimer();
+}
+
+//==============================================================================
+void AudioLoopStationAudioProcessor::timerCallback()
+{
+    // Guard: reset countdown if any track is actively recording, playing, or overdubbing,
+    // or if the global transport is running.
+    bool anyTrackActive = false;
+    for (const auto& t : mTracks)
+    {
+        if (t)
+        {
+            const auto s = t->getState();
+            if (s == LoopTrack::State::Recording  ||
+                s == LoopTrack::State::Playing     ||
+                s == LoopTrack::State::Overdubbing)
+            {
+                anyTrackActive = true;
+                break;
+            }
+        }
+    }
+
+    if (isPlaying() || anyTrackActive)
+    {
+        mAutoSaveTickCount = 0;
+        return;
+    }
+
+    ++mAutoSaveTickCount;
+    if (mAutoSaveTickCount < Config::AUTO_SAVE_INTERVAL_SECS)
+        return;
+
+    mAutoSaveTickCount = 0;
+
+    // Skip if there is nothing worth saving.
+    bool hasContent = false;
+    for (const auto& t : mTracks)
+        if (t && t->hasLoop()) { hasContent = true; break; }
+
+    if (!hasContent)
+        return;
+
+    // Ensure the auto-save directory exists, then hand off to the background thread.
+    auto folder = LoopFileHandler::getDefaultProjectFolder();
+    folder.createDirectory();
+    auto dest = folder.getChildFile(Config::AUTO_SAVE_FILENAME);
+
+    const bool triggered = mSaveThread.triggerSave(dest, mTracks,
+                                                    getSampleRate(),
+                                                    static_cast<float>(getBpm()));
+    if (!triggered)
+        DBG("Auto-save: skipped (previous save still running)");
 }
 
 //==============================================================================

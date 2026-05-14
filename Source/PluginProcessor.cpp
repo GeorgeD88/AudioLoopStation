@@ -406,6 +406,10 @@ void AudioLoopStationAudioProcessor::processBlock(juce::AudioBuffer<float>& buff
         double samplesPerTick = (getSampleRate() * 60.0) / (bpm * 24.0);
         int numSamples = buffer.getNumSamples();
 
+        // Guard: if samplesPerTick rounds to zero the while loop below would spin forever
+        // (accumulator never advances past numSamples and tickPos would stay at 0)
+        if (samplesPerTick <= 0.0) { return; }
+
         while (mMidiClockAccumulator < (double)numSamples)
         {
             int tickPos = static_cast<int>(mMidiClockAccumulator);

@@ -140,6 +140,8 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/MixerTests.cpp
         Source/Tests/ParameterThreadSafetyTests.cpp
         Source/Tests/LoopTrackTests.cpp
+        Source/Tests/KeyboardShortcutTests.cpp
+        Source/Tests/FourTrackSyncTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
         Source/Audio/LoopTrack.cpp

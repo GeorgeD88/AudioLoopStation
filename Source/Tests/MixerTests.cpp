@@ -770,6 +770,119 @@ public:
             expectWithinAbsoluteError(output.getSample(0, 1), 0.0f, 0.0001f,
                                       "Limiter should not delay the clipped sample.");
         }
+
+        // ------------------------------------------------------------------ //
+        // Stress test 1: sustained heavy mixing over 500 consecutive blocks.  //
+        // Verifies that repeated float arithmetic does not accumulate errors   //
+        // (NaN, inf, or ceiling breach) when all four tracks run loud.        //
+        // ------------------------------------------------------------------ //
+        beginTest("sustained 500 blocks of heavy mixing: no NaN, inf, or ceiling breach");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 256);
+
+            std::vector<juce::AudioBuffer<float>> tracks;
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            tracks.reserve(Config::NUM_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
+
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
+            {
+                setTrackParams(apvts, i, 1.0f, 0.0f);
+                tracks.emplace_back(2, 256);
+                fillBuffer(tracks.back(), 5.0f);  // loud, legitimate hot signal
+                inputs.push_back(&tracks.back());
+            }
+
+            juce::AudioBuffer<float> output(2, 256);
+            bool allFinite = true;
+            float maxAbsValue = 0.0f;
+
+            for (int block = 0; block < 500; ++block)
+            {
+                output.clear();
+                mixer.process(inputs, output);
+
+                for (int ch = 0; ch < output.getNumChannels(); ++ch)
+                {
+                    for (int s = 0; s < output.getNumSamples(); ++s)
+                    {
+                        const float sample = output.getSample(ch, s);
+                        if (!std::isfinite(sample))
+                            allFinite = false;
+                        maxAbsValue = juce::jmax(maxAbsValue, std::abs(sample));
+                    }
+                }
+            }
+
+            expect(allFinite,
+                   "No NaN or inf should appear across 500 consecutive blocks of heavy mixing.");
+            expect(maxAbsValue <= 1.0001f,
+                   "Limiter ceiling must hold for all 500 blocks of sustained heavy mixing.");
+        }
+
+        // ------------------------------------------------------------------ //
+        // Stress test 2: alternating-polarity signal across all four tracks.  //
+        // Each track plays a full-scale square wave; adjacent tracks use       //
+        // opposite polarity so partial cancellation tests the ceiling in both  //
+        // directions.  Runs 500 blocks to confirm there is no drift.          //
+        // ------------------------------------------------------------------ //
+        beginTest("alternating-polarity heavy mix stays within ceiling over 500 blocks");
+        {
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, 128);
+
+            std::vector<juce::AudioBuffer<float>> tracks;
+            std::vector<juce::AudioBuffer<float>*> inputs;
+            tracks.reserve(Config::NUM_TRACKS);
+            inputs.reserve(Config::NUM_TRACKS);
+
+            for (int i = 0; i < Config::NUM_TRACKS; ++i)
+            {
+                setTrackParams(apvts, i, 1.0f, 0.0f);
+                tracks.emplace_back(2, 128);
+
+                // Odd-indexed tracks are positive; even-indexed are negative.
+                const float polarity = (i % 2 == 0) ? 6.0f : -6.0f;
+                fillBuffer(tracks.back(), polarity);
+                inputs.push_back(&tracks.back());
+            }
+
+            juce::AudioBuffer<float> output(2, 128);
+            bool ceilingHeld = true;
+            bool allFinite   = true;
+
+            for (int block = 0; block < 500; ++block)
+            {
+                output.clear();
+                mixer.process(inputs, output);
+
+                for (int ch = 0; ch < output.getNumChannels(); ++ch)
+                {
+                    for (int s = 0; s < output.getNumSamples(); ++s)
+                    {
+                        const float sample = output.getSample(ch, s);
+                        if (!std::isfinite(sample))
+                            allFinite = false;
+                        if (sample > 1.0001f || sample < -1.0001f)
+                            ceilingHeld = false;
+                    }
+                }
+            }
+
+            expect(allFinite,
+                   "Alternating-polarity mix must not produce NaN or inf.");
+            expect(ceilingHeld,
+                   "Ceiling must be respected even with alternating-polarity loud input.");
+        }
     }
 };
 

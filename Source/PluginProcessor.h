@@ -7,10 +7,13 @@
 #include "Audio/MixerEngine.h"
 #include "Audio/LoopFileHandler.h"
 #include "Audio/LoopTrack.h"
+#include "Audio/BackgroundSaveThread.h"
 #include "Utils/DebugLogger.h"
+#include "Utils/Config.h"
 
 //==============================================================================
-class AudioLoopStationAudioProcessor : public juce::AudioProcessor
+class AudioLoopStationAudioProcessor : public juce::AudioProcessor,
+                                       private juce::Timer
 {
 public:
     static constexpr int NUM_TRACKS = Config::NUM_TRACKS;
@@ -153,7 +156,11 @@ private:
     bool mMidiClockRunning = false;
     int mMidiPulseNote = 36; // C1
 
-    // ---------------------------
+    // --- Auto-save (30-second countdown, only while transport is stopped) ---
+    BackgroundSaveThread mSaveThread;
+    int mAutoSaveTickCount { 0 };
+    void timerCallback() override;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLoopStationAudioProcessor)
 };

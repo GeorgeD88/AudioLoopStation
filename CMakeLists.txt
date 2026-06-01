@@ -41,6 +41,8 @@ set(SourceFiles
         Source/Audio/MixerEngine.cpp                                    # The mixing console and master section - controls gain and levels
         Source/Audio/MixerEngine.h
         Source/Audio/LoopFileHandler.cpp                                # Sample and session storage and playback from file
+        Source/Audio/BackgroundSaveThread.h                             # Off-thread project save worker
+        Source/Audio/BackgroundSaveThread.cpp
 
 
         # UI - separate graphics data here (PluginEditor related)
@@ -140,6 +142,8 @@ target_sources(AudioLoopStation_Tests
         Source/Tests/LoopTrackTests.cpp
         Source/Tests/RecordPlaybackIntegrationTests.cpp
         Source/PluginProcessor.cpp
+        Source/Tests/KeyboardShortcutTests.cpp
+        Source/Tests/FourTrackSyncTests.cpp
         Source/Audio/MixerEngine.cpp
         Source/Audio/MixerEngine.h
         Source/Audio/LoopTrack.cpp

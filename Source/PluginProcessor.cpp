@@ -388,6 +388,11 @@ void AudioLoopStationAudioProcessor::processBlock(juce::AudioBuffer<float>& buff
     double bpm = mBpm.load();
     if (bpm > 10.0 && masterLength > 0 && !isFirstLoopPhase)
     {
+        // Guard: if samplesPerTick rounds to zero the while loop below would spin forever
+        // (accumulator never advances past numSamples and tickPos would stay at 0)
+        double samplesPerTick = (getSampleRate() * 60.0) / (bpm * 24.0);
+        if (samplesPerTick <= 0.0) { return; }
+
         int syncChannel = 1;
         if (mParamMidiSyncChannel != nullptr)
             syncChannel = juce::jlimit(1, 16, juce::roundToInt(mParamMidiSyncChannel->load()) + 1);
@@ -403,7 +408,6 @@ void AudioLoopStationAudioProcessor::processBlock(juce::AudioBuffer<float>& buff
             mMidiClockAccumulator = 0.0;
         }
 
-        double samplesPerTick = (getSampleRate() * 60.0) / (bpm * 24.0);
         int numSamples = buffer.getNumSamples();
 
         while (mMidiClockAccumulator < (double)numSamples)

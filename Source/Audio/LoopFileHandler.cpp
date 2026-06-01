@@ -178,6 +178,70 @@ bool LoopFileHandler::loadProject(const juce::File& source,
     return true;
 }
 
+bool LoopFileHandler::saveProjectFromSnapshot(const juce::File& destination,
+                                              const std::vector<TrackSaveData>& snapshot,
+                                              double sampleRate,
+                                              float  bpm)
+{
+    juce::FileOutputStream stream(destination);
+    if (!stream.openedOk())
+    {
+        DBG("BackgroundSave: Failed to open file: " + destination.getFullPathName());
+        return false;
+    }
+
+    AlsFormat::Header header;
+    AlsFormat::initHeader(header);
+    header.sampleRate  = static_cast<uint32_t>(sampleRate > 0 ? sampleRate : 48000.0);
+    header.numChannels = 2;
+    header.numTracks   = static_cast<uint16_t>(snapshot.size());
+
+    // Build JSON metadata
+    juce::DynamicObject::Ptr root = new juce::DynamicObject();
+    root->setProperty("version",    static_cast<int>(AlsFormat::VERSION));
+    root->setProperty("bpm",        bpm);
+    root->setProperty("sampleRate", static_cast<int>(header.sampleRate));
+    root->setProperty("numTracks",  static_cast<int>(header.numTracks));
+
+    juce::Array<juce::var> tracksArray;
+    for (size_t i = 0; i < snapshot.size(); ++i)
+    {
+        juce::DynamicObject::Ptr t = new juce::DynamicObject();
+        t->setProperty("index",             static_cast<int>(i));
+        t->setProperty("loopLengthSamples", snapshot[i].loopLengthSamples);
+        t->setProperty("hasAudio",          snapshot[i].hasAudio);
+        tracksArray.add(juce::var(t.get()));
+    }
+    root->setProperty("tracks", tracksArray);
+
+    const juce::String jsonStr   = juce::JSON::toString(juce::var(root.get()));
+    const size_t       jsonBytes = jsonStr.getNumBytesAsUTF8();
+    juce::MemoryBlock  jsonBlock(jsonStr.toRawUTF8(), jsonBytes);
+    header.jsonLength = jsonBlock.getSize();
+
+    // Serialise audio to memory first so we know the total byte count
+    juce::MemoryBlock        audioBlock;
+    juce::MemoryOutputStream audioStream(audioBlock, true);
+    for (const auto& td : snapshot)
+    {
+        if (!td.hasAudio) continue;
+        const int numSamples  = td.buffer.getNumSamples();
+        const int numChannels = td.buffer.getNumChannels();
+        audioStream.writeInt(numSamples);
+        audioStream.writeInt(numChannels);
+        for (int ch = 0; ch < numChannels; ++ch)
+            audioStream.write(td.buffer.getReadPointer(ch),
+                              static_cast<size_t>(numSamples) * sizeof(float));
+    }
+    header.audioLength = audioBlock.getSize();
+
+    if (!stream.write(&header, AlsFormat::HEADER_SIZE))           return false;
+    if (!stream.write(jsonBlock.getData(), header.jsonLength))     return false;
+    if (header.audioLength > 0 &&
+        !stream.write(audioBlock.getData(), header.audioLength))   return false;
+
+    return true;
+}
 
 juce::StringArray LoopFileHandler::getSupportedExtensions() {
     return {"wav", "aiff", "aif", "flac", "ogg" };

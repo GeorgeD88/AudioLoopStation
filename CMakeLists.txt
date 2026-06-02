@@ -148,6 +148,10 @@ target_sources(AudioLoopStation_Tests
         Source/Audio/MixerEngine.h
         Source/Audio/LoopTrack.cpp
         Source/Audio/LoopTrack.h
+        Source/Audio/LoopFileHandler.cpp
+        Source/Audio/LoopFileHandler.h
+        Source/Audio/BackgroundSaveThread.cpp
+        Source/Audio/BackgroundSaveThread.h
         Source/Utils/Config.h
 )
 

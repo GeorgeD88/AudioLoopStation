@@ -497,7 +497,11 @@ bool AudioLoopStationAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* AudioLoopStationAudioProcessor::createEditor()
 {
+#ifdef ALS_TESTING
+    return nullptr;
+#else
     return new AudioLoopStationEditor (*this);
+#endif
 }
 
 //==============================================================================

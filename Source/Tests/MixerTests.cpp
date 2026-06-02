@@ -605,6 +605,116 @@ public:
             expect(last > middle, "Expected end of block to be louder than middle..");
             expect(last <= 0.26f, " Headroom should keep single-track output around 0.25 max");
         }
+
+        beginTest("active loop volume changes avoid zipper jumps");
+        {
+            constexpr int blockSize = 64;
+
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, blockSize);
+
+            std::atomic<std::int64_t> loopPosition { 0 };
+            mixer.setGlobalSampleCounter(&loopPosition);
+
+            juce::AudioBuffer<float> activeLoop(2, 128);
+            fillBuffer(activeLoop, 1.0f);
+
+            std::vector<juce::AudioBuffer<float>*> inputs { &activeLoop };
+            juce::AudioBuffer<float> output(2, blockSize);
+
+            setTrackParams(apvts, 0, 0.0f, 0.0f);
+            for (int i = 0; i < 8; ++i)
+            {
+                output.clear();
+                mixer.process(inputs, output);
+                loopPosition.fetch_add(blockSize);
+            }
+
+            bool allSamplesFinite = true;
+            bool hasPreviousSample = false;
+            float previousSample = 0.0f;
+            float biggestJump = 0.0f;
+
+            auto renderVolume = [&](float targetVolume)
+            {
+                setTrackParams(apvts, 0, targetVolume, 0.0f);
+                output.clear();
+                mixer.process(inputs, output);
+                loopPosition.fetch_add(blockSize);
+
+                for (int sample = 0; sample < blockSize; ++sample)
+                {
+                    const float value = output.getSample(0, sample);
+                    allSamplesFinite = allSamplesFinite && std::isfinite(value);
+
+                    if (hasPreviousSample)
+                        biggestJump = juce::jmax(biggestJump, std::abs(value - previousSample));
+
+                    previousSample = value;
+                    hasPreviousSample = true;
+                }
+            };
+
+            renderVolume(1.0f);
+            expect(output.getSample(0, blockSize - 1) < 0.12f,
+                   "First ramp block should not jump straight to full volume.");
+
+            renderVolume(0.0f);
+            renderVolume(1.0f);
+            renderVolume(0.0f);
+            renderVolume(1.0f);
+
+            expect(allSamplesFinite, "Rapid volume changes should not create NaN or inf samples.");
+            expect(biggestJump < 0.02f, "Volume smoothing should avoid zipper jumps between samples.");
+        }
+
+        beginTest("active loop panner moves signal left and right");
+        {
+            constexpr int blockSize = 64;
+
+            DummyProcessor proc;
+            juce::AudioProcessorValueTreeState apvts(proc, nullptr, "PARAMS", createMockLayout());
+
+            MixerEngine mixer;
+            mixer.attachParameters(apvts);
+            mixer.prepare(48000.0, blockSize);
+
+            juce::AudioBuffer<float> activeLoop(2, 128);
+            fillBuffer(activeLoop, 1.0f);
+
+            std::vector<juce::AudioBuffer<float>*> inputs { &activeLoop };
+            juce::AudioBuffer<float> output(2, blockSize);
+
+            auto renderPan = [&](float pan)
+            {
+                setTrackParams(apvts, 0, 1.0f, pan);
+
+                for (int i = 0; i < 16; ++i)
+                {
+                    output.clear();
+                    mixer.process(inputs, output);
+                }
+
+                return std::pair<float, float>(
+                    output.getMagnitude(0, 0, blockSize),
+                    output.getMagnitude(1, 0, blockSize));
+            };
+
+            const auto centerPan = renderPan(0.0f);
+            const auto leftPan = renderPan(-1.0f);
+            const auto rightPan = renderPan(1.0f);
+
+            expect(leftPan.first > leftPan.second + 0.05f,
+                   "Left pan should make the left channel louder.");
+            expectWithinAbsoluteError(centerPan.first, centerPan.second, 0.0001f,
+                                      "Center pan should keep both channels balanced.");
+            expect(rightPan.second > rightPan.first + 0.05f,
+                   "Right pan should make the right channel louder.");
+        }
     }
 };
 
